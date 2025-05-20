@@ -427,6 +427,100 @@ app.get('/api/files', (req, res) => {
   }
 });
 
+// Route pour nettoyer les fichiers importés dans le dossier uploads
+app.post('/api/clean-uploads', (req, res) => {
+  const uploadsDir = path.join(__dirname, '../../uploads');
+  
+  try {
+    // Vérifier si le dossier existe
+    if (!fs.existsSync(uploadsDir)) {
+      return res.json({ success: true, message: 'Aucun fichier à nettoyer' });
+    }
+    
+    // Lire le contenu du dossier
+    const files = fs.readdirSync(uploadsDir)
+      .filter(file => !file.startsWith('.')); // Ignorer les fichiers cachés
+    
+    // Supprimer tous les fichiers
+    let deletedCount = 0;
+    for (const file of files) {
+      const filePath = path.join(uploadsDir, file);
+      fs.unlinkSync(filePath);
+      deletedCount++;
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `${deletedCount} fichier(s) importé(s) supprimé(s) avec succès` 
+    });
+  } catch (error) {
+    console.error('Erreur lors du nettoyage des fichiers importés:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors du nettoyage des fichiers importés', 
+      details: error.message 
+    });
+  }
+});
+
+// Route pour obtenir des statistiques sur l'utilisation disque
+app.get('/api/disk-usage', (req, res) => {
+  try {
+    const uploadsDir = path.join(__dirname, '../../uploads');
+    const outputsDir = path.join(__dirname, '../../outputs');
+    const tempDir = path.join(__dirname, '../../temp');
+    
+    const stats = {
+      uploads: { size: 0, count: 0 },
+      outputs: { size: 0, count: 0 },
+      temp: { size: 0, count: 0 }
+    };
+    
+    // Calculer la taille et le nombre de fichiers dans le dossier uploads
+    if (fs.existsSync(uploadsDir)) {
+      const uploadFiles = fs.readdirSync(uploadsDir).filter(file => !file.startsWith('.'));
+      stats.uploads.count = uploadFiles.length;
+      
+      for (const file of uploadFiles) {
+        const filePath = path.join(uploadsDir, file);
+        const fileStats = fs.statSync(filePath);
+        stats.uploads.size += fileStats.size;
+      }
+    }
+    
+    // Calculer la taille et le nombre de fichiers dans le dossier outputs
+    if (fs.existsSync(outputsDir)) {
+      const outputFiles = fs.readdirSync(outputsDir).filter(file => !file.startsWith('.'));
+      stats.outputs.count = outputFiles.length;
+      
+      for (const file of outputFiles) {
+        const filePath = path.join(outputsDir, file);
+        const fileStats = fs.statSync(filePath);
+        stats.outputs.size += fileStats.size;
+      }
+    }
+    
+    // Calculer la taille et le nombre de fichiers dans le dossier temp
+    if (fs.existsSync(tempDir)) {
+      const tempFiles = fs.readdirSync(tempDir).filter(file => !file.startsWith('.'));
+      stats.temp.count = tempFiles.length;
+      
+      for (const file of tempFiles) {
+        const filePath = path.join(tempDir, file);
+        const fileStats = fs.statSync(filePath);
+        stats.temp.size += fileStats.size;
+      }
+    }
+    
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('Erreur lors du calcul de l\'utilisation disque:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors du calcul de l\'utilisation disque', 
+      details: error.message 
+    });
+  }
+});
+
 // Route pour modifier les métadonnées d'un fichier et le renommer
 app.put('/api/files/:filename/metadata', async (req, res) => {
   const filename = req.params.filename;

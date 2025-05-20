@@ -10,6 +10,9 @@ const FileManager = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [cleaningUploads, setCleaningUploads] = useState(false);
+  const [diskUsage, setDiskUsage] = useState(null);
+  const [loadingDiskUsage, setLoadingDiskUsage] = useState(false);
 
   // Formater la taille du fichier
   const formatFileSize = (bytes) => {
@@ -52,6 +55,25 @@ const FileManager = () => {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Charger les statistiques d'utilisation du disque
+  const loadDiskUsage = async () => {
+    try {
+      setLoadingDiskUsage(true);
+      const response = await fetch('/api/disk-usage');
+      const data = await response.json();
+
+      if (response.ok) {
+        setDiskUsage(data.stats);
+      } else {
+        console.error('Erreur lors du chargement des statistiques:', data.error);
+      }
+    } catch (err) {
+      console.error('Erreur de connexion au serveur lors du chargement des statistiques:', err);
+    } finally {
+      setLoadingDiskUsage(false);
     }
   };
 
@@ -277,9 +299,54 @@ const FileManager = () => {
     }, 3000);
   };
 
-  // Charger les fichiers au chargement du composant
+  // Nettoyer les fichiers importés
+  const cleanUploadedFiles = async () => {
+    if (!window.confirm('Êtes-vous sûr de vouloir nettoyer tous les fichiers importés ? Cette action ne supprimera pas vos fichiers traités.')) {
+      return;
+    }
+
+    try {
+      setCleaningUploads(true);
+      
+      const response = await fetch('/api/clean-uploads', {
+        method: 'POST',
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors du nettoyage des fichiers importés');
+      }
+      
+      setDeleteStatus({
+        show: true,
+        message: data.message,
+        isError: false
+      });
+      
+      // Recharger les statistiques d'utilisation du disque
+      loadDiskUsage();
+      
+      // Masquer le message après 3 secondes
+      setTimeout(() => {
+        setDeleteStatus({ show: false, message: '', isError: false });
+      }, 3000);
+    } catch (err) {
+      setDeleteStatus({
+        show: true,
+        message: err.message,
+        isError: true
+      });
+      console.error('Erreur lors du nettoyage des fichiers importés:', err);
+    } finally {
+      setCleaningUploads(false);
+    }
+  };
+
+  // Charger les fichiers et les statistiques au chargement du composant
   useEffect(() => {
     loadFiles();
+    loadDiskUsage();
   }, []);
 
   return (
@@ -302,6 +369,48 @@ const FileManager = () => {
               onSuccess={handleMetadataSuccess} 
             />
           </div>
+        </div>
+      )}
+
+      {/* Affichage des statistiques d'utilisation du disque */}
+      {diskUsage && (
+        <div className="disk-usage-stats">
+          <div className="disk-usage-item">
+            <h4>Fichiers importés</h4>
+            <div className="disk-usage-details">
+              <span>{diskUsage.uploads.count} fichier(s)</span>
+              <span>{formatFileSize(diskUsage.uploads.size)}</span>
+              <button 
+                onClick={cleanUploadedFiles} 
+                className="btn btn-sm btn-danger" 
+                disabled={cleaningUploads || diskUsage.uploads.count === 0}
+              >
+                {cleaningUploads ? 'Nettoyage...' : 'Nettoyer'}
+              </button>
+            </div>
+          </div>
+          <div className="disk-usage-item">
+            <h4>Fichiers traités</h4>
+            <div className="disk-usage-details">
+              <span>{diskUsage.outputs.count} fichier(s)</span>
+              <span>{formatFileSize(diskUsage.outputs.size)}</span>
+            </div>
+          </div>
+          <div className="disk-usage-item">
+            <h4>Fichiers temporaires</h4>
+            <div className="disk-usage-details">
+              <span>{diskUsage.temp.count} fichier(s)</span>
+              <span>{formatFileSize(diskUsage.temp.size)}</span>
+            </div>
+          </div>
+          <button 
+            onClick={loadDiskUsage} 
+            className="btn btn-sm btn-secondary refresh-stats"
+            title="Actualiser les statistiques"
+            disabled={loadingDiskUsage}
+          >
+            {loadingDiskUsage ? '...' : '↻'}
+          </button>
         </div>
       )}
 

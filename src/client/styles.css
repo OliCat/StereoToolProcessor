@@ -253,7 +253,83 @@ input[type="file"] {
 
 /* File Manager Styles */
 .file-manager {
-  width: 100%;
+  padding: 1rem;
+}
+
+.file-manager h2 {
+  margin-bottom: 0.5rem;
+}
+
+.file-manager p {
+  margin-bottom: 1rem;
+  color: #666;
+}
+
+/* Disk Usage Stats */
+.disk-usage-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  background-color: #f5f5f5;
+  border-radius: 5px;
+  position: relative;
+}
+
+.disk-usage-item {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.5rem 1rem;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.disk-usage-item h4 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.disk-usage-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.disk-usage-details span:first-child {
+  font-weight: bold;
+}
+
+.disk-usage-details span:nth-child(2) {
+  color: #666;
+}
+
+.refresh-stats {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+/* File actions bar */
+.file-actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 1rem 0;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .refresh-button-container {
