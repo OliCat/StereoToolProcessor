@@ -11,6 +11,10 @@ yarn-error.log
 .env.test.local
 .env.production.local
 
+# Configuration sécurisée (NE PAS COMMITTER)
+config.js
+config.production.js
+
 # Fichiers de build
 /build
 /dist
@@ -21,6 +25,26 @@ yarn-error.log
 /temp/
 /presets/
 
+# Logs de l'application sécurisée
+/logs/
+*.log
+
+# Base de données de test
+*.sqlite
+*.sqlite3
+test_database.sqlite
+
+# Fichiers de sauvegarde
+*.backup
+*.bak
+*backup*
+
+# Certificats SSL/TLS
+*.pem
+*.key
+*.crt
+*.cert
+
 # Fichiers système
 .DS_Store
 Thumbs.db
@@ -28,6 +52,7 @@ Thumbs.db
 # Fichiers spécifiques à StereoTool
 stereo_tool_mac
 stereo_tool_win.exe
+stereo_tool_linux
 *.sts
 
 # Fichiers audio
@@ -37,4 +62,14 @@ stereo_tool_win.exe
 *.aiff
 *.ogg
 *.m4a
-*.zip 
+*.zip
+
+# PM2
+.pm2/
+
+# Fichiers de session
+sessions/
+
+# Cache et fichiers temporaires
+.cache/
+tmp/ 
