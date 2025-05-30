@@ -1,126 +1,226 @@
-# StereoTool Processor
+# 🎵 StereoTool Processor
+## Application de Traitement Audio pour Radio Cause Commune
 
-Une application web pour traiter des fichiers audio avec StereoTool.
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/RadioCauseCommune/StereoToolProcessor)
+[![Security](https://img.shields.io/badge/security-enterprise-green.svg)](./README_SECURISE.md)
+[![License](https://img.shields.io/badge/license-Custom-orange.svg)](./LICENSE)
 
-## Fonctionnalités
+Une application web professionnelle pour le traitement de fichiers audio avec StereoTool, disponible en deux versions : standalone et sécurisée enterprise.
 
-- Traitement de fichiers audio individuels
-- Traitement par lot depuis un répertoire
-- Support pour les presets StereoTool (.sts)
-- Support pour différents formats audio (.wav, .mp3, .flac, .aiff, .ogg, .m4a)
-- Traitement automatique par segments pour les fichiers longs (>30 minutes)
-- Téléchargement des fichiers traités
-- Interface utilisateur intuitive
+## 🚀 **Versions Disponibles**
 
-## Prérequis
+### **Version 2.0 - Sécurisée Enterprise (Recommandée)**
+- ✅ **Authentification JWT** et gestion des rôles
+- ✅ **Base de données MySQL** avec ORM Sequelize
+- ✅ **Interface d'administration** complète
+- ✅ **Sécurité enterprise** : HTTPS, rate limiting, logs
+- ✅ **Déploiement production** avec PM2 et Nginx
+- ✅ **Restriction par domaine** (@radiocausecommune.fr)
 
-- Node.js (v14 ou supérieur)
-- npm (v6 ou supérieur)
-- StereoTool (exécutable `stereo_tool_mac` dans le répertoire racine du projet)
-- FFmpeg (installé et accessible dans le PATH)
-- Clé de licence StereoTool valide
+👉 **[Guide d'installation sécurisée](./README_SECURISE.md)**
 
-## Installation
+### **Version 1.0 - Standalone (Simple)**
+- ✅ Interface web basique pour le traitement StereoTool
+- ✅ Upload et traitement de fichiers audio
+- ✅ Support multi-formats (WAV, MP3, FLAC, etc.)
+- ✅ Traitement par segments pour les gros fichiers
 
-1. Clonez ce dépôt
-2. Installez les dépendances :
+## 📦 **Installation Rapide**
 
+### **Version Sécurisée (Recommandée)**
+```bash
+# Installation automatique
+./scripts/setup-secure.sh --auto
+
+# Ou installation interactive
+./scripts/setup-secure.sh
+```
+
+### **Version Standalone**
 ```bash
 npm install
-```
-
-3. Assurez-vous que FFmpeg est installé sur votre système:
-
-```bash
-# Pour macOS avec Homebrew
-brew install ffmpeg
-
-# Pour Ubuntu/Debian
-apt-get install ffmpeg
-
-# Pour Windows
-# Téléchargez depuis https://ffmpeg.org/download.html et ajoutez le dossier bin à votre PATH
-```
-
-4. Placez l'exécutable StereoTool dans le répertoire racine du projet.
-
-## Développement
-
-Pour démarrer le serveur de développement :
-
-```bash
-npm run dev
-```
-
-## Production
-
-Pour construire l'application pour la production :
-
-```bash
 npm run build
 npm start
 ```
 
-L'application sera accessible à l'adresse `http://localhost:3000`.
+## 🔧 **Fonctionnalités**
 
-## Utilisation
+### **Traitement Audio**
+- **Formats supportés** : WAV, MP3, FLAC, AIFF, OGG, M4A
+- **Presets StereoTool** personnalisables
+- **Traitement par segments** pour les fichiers longs (>30min)
+- **Traitement par lot** de plusieurs fichiers
+- **Optimisation automatique** du format de sortie
 
-### Traitement d'un fichier unique
+### **Sécurité (Version Enterprise)**
+- **Authentification sécurisée** avec JWT
+- **Gestion des rôles** : Admin, User, Guest
+- **Rate limiting** anti-attaques
+- **Logs d'audit** complets
+- **Chiffrement** des mots de passe
+- **Sessions sécurisées** en base de données
 
-1. Sélectionnez l'onglet "Fichier Unique"
-2. Téléchargez un fichier audio (formats supportés: .wav, .mp3, .flac, .aiff, .ogg, .m4a)
-3. Téléchargez un preset StereoTool (.sts)
-4. Entrez votre clé de licence StereoTool
-5. Cliquez sur "Traiter le Fichier"
-6. Une fois le traitement terminé, téléchargez le fichier traité
+### **Administration (Version Enterprise)**
+- **Tableau de bord** avec statistiques temps réel
+- **Gestion des utilisateurs** et permissions
+- **Monitoring** des processus de traitement
+- **Configuration centralisée**
+- **Quotas par utilisateur**
 
-### Traitement par lot
+## 🏗️ **Architecture**
 
-1. Sélectionnez l'onglet "Traitement par Lot"
-2. Téléchargez plusieurs fichiers audio (jusqu'à 20 fichiers)
-3. Téléchargez un preset StereoTool (.sts)
-4. Entrez votre clé de licence StereoTool
-5. Cliquez sur "Traiter les Fichiers"
-6. Une fois le traitement terminé, téléchargez les fichiers traités individuellement
-
-### Gestion des fichiers longs
-
-Les fichiers audio de plus de 30 minutes sont automatiquement traités par segments:
-1. Le fichier est divisé en segments de 10 minutes
-2. Chaque segment est traité individuellement
-3. Les segments traités sont fusionnés en un seul fichier
-4. Le fichier résultant est identique à l'original en termes de qualité et de durée
-
-### Format de sortie
-
-Tous les fichiers sont convertis au format WAV (PCM 16 bits, 44,1 kHz) pour assurer:
-- Une compatibilité maximale avec les applications audio comme Adobe Audition
-- Une qualité optimale sans artefacts de compression
-- Une cohérence dans le traitement, quelle que soit la source
-
-## Structure du projet
-
+### **Version Enterprise**
 ```
-.
+┌─────────────────┐    ┌──────────────┐    ┌─────────────────┐
+│   Nginx Proxy   │────│  Node.js App │────│  MySQL Database │
+│   (SSL/HTTPS)   │    │  (Cluster)   │    │  (Users/Jobs)   │
+└─────────────────┘    └──────────────┘    └─────────────────┘
+         │                       │                     │
+    ┌────▼────┐             ┌────▼────┐           ┌────▼────┐
+    │Fail2Ban │             │ Winston │           │Sessions │
+    │Firewall │             │  Logs   │           │ Store   │
+    └─────────┘             └─────────┘           └─────────┘
+```
+
+### **Version Standalone**
+```
+┌─────────────────┐    ┌──────────────┐
+│   Web Browser   │────│  Node.js App │
+│                 │    │  (Express)   │
+└─────────────────┘    └──────────────┘
+                              │
+                        ┌─────▼─────┐
+                        │StereoTool │
+                        │Processing │
+                        └───────────┘
+```
+
+## 📖 **Documentation**
+
+- **[README Sécurisé](./README_SECURISE.md)** - Version Enterprise complète
+- **[Guide de Déploiement](./DEPLOYMENT_GUIDE.md)** - Installation production
+- **[Évolutions](./EVOLUTIONS.md)** - Historique des versions
+- **[Contribution](./CONTRIBUTING.md)** - Guide pour contribuer
+
+## 🚀 **Déploiement Production**
+
+### **Prérequis**
+- Ubuntu 20.04+ LTS
+- Node.js 18+
+- MySQL 8.0+
+- Nginx
+- Domaine avec SSL
+
+### **Installation Automatique**
+```bash
+# Sur votre serveur
+./scripts/setup-secure.sh --production
+
+# Suivre le guide détaillé
+cat DEPLOYMENT_GUIDE.md
+```
+
+## 🔐 **Sécurité**
+
+La version enterprise inclut :
+- **Authentification JWT** avec refresh tokens
+- **Rate limiting** configurable
+- **Headers de sécurité** Helmet.js
+- **Protection CSRF** et XSS
+- **Logs sécurisés** avec Winston
+- **Firewall** et monitoring Fail2Ban
+- **HTTPS** obligatoire en production
+
+## 📊 **API Documentation**
+
+### **Endpoints Publics**
+```
+POST /api/auth/login       # Connexion utilisateur
+```
+
+### **Endpoints Authentifiés**
+```
+GET  /api/auth/profile     # Profil utilisateur
+POST /api/upload           # Upload et traitement
+GET  /api/jobs             # Liste des tâches
+GET  /api/download/:id     # Téléchargement
+```
+
+### **Endpoints Admin**
+```
+POST /api/auth/register    # Créer utilisateur
+GET  /api/auth/users       # Liste utilisateurs
+GET  /api/admin/stats      # Statistiques
+```
+
+## 🛠️ **Développement**
+
+### **Structure du Projet**
+```
 ├── src/
-│   ├── client/              # Code frontend React
-│   │   ├── components/      # Composants React
-│   │   ├── App.js           # Composant principal
-│   │   ├── index.js         # Point d'entrée React
-│   │   ├── index.html       # Template HTML
-│   │   └── styles.css       # Styles CSS
-│   └── server/              # Code backend Express
-│       └── index.js         # Serveur Express
-├── public/                  # Fichiers statiques et build client
-├── uploads/                 # Dossier temporaire pour les fichiers téléchargés
-├── presets/                 # Dossier temporaire pour les presets
-├── outputs/                 # Fichiers audio traités
-├── temp/                    # Fichiers temporaires pour le traitement par segments
-├── package.json             # Configuration npm
-├── webpack.config.js        # Configuration webpack
-└── README.md                # Documentation
+│   ├── client/           # Interface React
+│   │   ├── components/   # Composants UI
+│   │   │   └── Auth/     # Authentification
+│   │   └── styles.css    # Styles
+│   └── server/           # Backend Node.js
+│       ├── models/       # Modèles Sequelize
+│       ├── routes/       # Routes API
+│       ├── middleware/   # Middlewares sécurité
+│       ├── index.js      # Serveur standalone
+│       └── index-secure.js # Serveur sécurisé
+├── scripts/
+│   └── setup-secure.sh   # Installation automatique
+├── config.example.js     # Configuration exemple
+├── ecosystem.config.js   # Configuration PM2
+└── public/               # Assets statiques
 ```
 
-## Licence
+### **Scripts NPM**
+```bash
+npm run dev          # Développement (serveur classique)
+npm run dev-secure   # Développement (serveur sécurisé)
+npm run build        # Construction production
+npm run start        # Démarrage production
+npm test             # Tests (à implémenter)
+```
 
-Ce projet est sous licence MIT. 
+## 🤝 **Contribution**
+
+1. Fork le projet
+2. Créer une branche feature (`git checkout -b feature/AmazingFeature`)
+3. Commit vos changements (`git commit -m 'Add AmazingFeature'`)
+4. Push vers la branche (`git push origin feature/AmazingFeature`)
+5. Ouvrir une Pull Request
+
+## 📝 **Changelog**
+
+### **v2.0.0** - Version Sécurisée Enterprise
+- ➕ Authentification JWT complète
+- ➕ Base de données MySQL/Sequelize
+- ➕ Interface d'administration
+- ➕ Sécurité enterprise (rate limiting, logs, HTTPS)
+- ➕ Déploiement production automatisé
+- ➕ Guide d'installation complet
+
+### **v1.0.0** - Version Standalone
+- ➕ Interface web de base
+- ➕ Traitement StereoTool
+- ➕ Support multi-formats
+- ➕ Traitement par segments
+
+## 📧 **Support**
+
+- **Email technique** : `admin@radiocausecommune.fr`
+- **Issues GitHub** : [Créer un ticket](https://github.com/RadioCauseCommune/StereoToolProcessor/issues)
+- **Documentation** : Voir les guides dans le repository
+
+## 📄 **Licence**
+
+Application développée spécifiquement pour Radio Cause Commune.
+Utilisation soumise aux conditions de licence StereoTool.
+
+---
+
+**🎵 Radio Cause Commune - Traitement Audio Professionnel**
+
+*Transformez vos enregistrements avec la puissance de StereoTool dans une interface web moderne et sécurisée.* 
