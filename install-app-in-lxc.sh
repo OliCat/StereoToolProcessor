@@ -165,8 +165,12 @@ pct push $CTID /tmp/config_lxc.js $APP_DIR/config.js
 rm /tmp/config_lxc.js
 
 # Installation des dépendances Node.js
-lxc_exec "cd $APP_DIR && sudo -u $APP_USER npm install --production"
+echo "📦 Installation des dépendances Node.js..."
+lxc_exec "cd $APP_DIR && sudo -u $APP_USER npm install"
+echo "🏗️ Build de l'application..."
 lxc_exec "cd $APP_DIR && sudo -u $APP_USER npm run build"
+echo "🧹 Nettoyage des devDependencies..."
+lxc_exec "cd $APP_DIR && sudo -u $APP_USER npm prune --omit=dev"
 
 # Création des dossiers nécessaires
 lxc_exec "mkdir -p $APP_DIR/uploads $APP_DIR/outputs $APP_DIR/temp $APP_DIR/logs"
