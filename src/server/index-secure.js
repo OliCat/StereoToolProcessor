@@ -444,7 +444,7 @@ app.post('/api/process-file', authenticateToken, singleFileUpload.fields([
         });
         
         // Traiter avec StereoTool
-        const stereoToolPath = './stereo_tool_cmd_x64';
+        const stereoToolPath = config.stereoTool.executablePath;
         const command = `${stereoToolPath} "${tempWavPath}" "${outputPath}" -s "${preset.path}" -k "${licenseKey}"`;
         await processStereoTool(command);
         
@@ -452,7 +452,7 @@ app.post('/api/process-file', authenticateToken, singleFileUpload.fields([
         fs.unlinkSync(tempWavPath);
       } else {
         // Traiter directement avec StereoTool pour les fichiers WAV
-        const stereoToolPath = './stereo_tool_cmd_x64';
+        const stereoToolPath = config.stereoTool.executablePath;
         const command = `${stereoToolPath} "${audioFile.path}" "${outputPath}" -s "${preset.path}" -k "${licenseKey}"`;
         await processStereoTool(command);
       }
@@ -523,7 +523,7 @@ app.post('/api/batch-process', authenticateToken, singleFileUpload.fields([
             });
             
             // Traiter avec StereoTool
-            const stereoToolPath = './stereo_tool_cmd_x64';
+            const stereoToolPath = config.stereoTool.executablePath;
             const command = `${stereoToolPath} "${tempWavPath}" "${outputPath}" -s "${preset.path}" -k "${licenseKey}"`;
             await processStereoTool(command);
             
@@ -531,7 +531,7 @@ app.post('/api/batch-process', authenticateToken, singleFileUpload.fields([
             fs.unlinkSync(tempWavPath);
           } else {
             // Traiter directement avec StereoTool pour les fichiers WAV
-            const stereoToolPath = './stereo_tool_cmd_x64';
+            const stereoToolPath = config.stereoTool.executablePath;
             const command = `${stereoToolPath} "${audioFile.path}" "${outputPath}" -s "${preset.path}" -k "${licenseKey}"`;
             await processStereoTool(command);
           }
