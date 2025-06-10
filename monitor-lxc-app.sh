@@ -43,12 +43,12 @@ fi
 
 print_status "Container LXC" "Running"
 
-# Vérifier MySQL
-mysql_status=$(lxc_exec "systemctl is-active mysql" 2>/dev/null || echo "stopped")
-if [ "$mysql_status" = "active" ]; then
-    print_status "MySQL" "Active"
+# Vérifier MariaDB
+mariadb_status=$(lxc_exec "systemctl is-active mariadb" 2>/dev/null || echo "stopped")
+if [ "$mariadb_status" = "active" ]; then
+    print_status "MariaDB" "Active"
 else
-    print_status "MySQL" "ERREUR - $mysql_status"
+    print_status "MariaDB" "ERREUR - $mariadb_status"
 fi
 
 # Vérifier les connexions à la base de données
@@ -137,7 +137,7 @@ echo "======================="
 echo "Redémarrer l'application: sudo -u $APP_USER pm2 restart stereo-tool-processor"
 echo "Voir les logs: sudo -u $APP_USER pm2 logs stereo-tool-processor"
 echo "Nettoyer les fichiers temporaires: rm -rf $APP_DIR/temp/*"
-echo "Redémarrer MySQL: systemctl restart mysql"
+echo "Redémarrer MariaDB: systemctl restart mariadb"
 echo "Vérifier la configuration: cat $APP_DIR/config.js"
 
 # Script de nettoyage automatique
@@ -159,7 +159,7 @@ fi
 # Résumé final
 echo -e "\n${BLUE}📋 Résumé${NC}"
 echo "========="
-if [ "$mysql_status" = "active" ] && [ "$pm2_status" = "online" ] && [ "$port_check" = "OK" ]; then
+if [ "$mariadb_status" = "active" ] && [ "$pm2_status" = "online" ] && [ "$port_check" = "OK" ]; then
     echo -e "${GREEN}✅ Système opérationnel${NC}"
     exit 0
 else

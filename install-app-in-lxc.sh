@@ -25,10 +25,12 @@ echo "📦 Installation des dépendances système..."
 lxc_exec "curl -fsSL https://deb.nodesource.com/setup_18.x | bash -"
 lxc_exec "apt install -y nodejs"
 
-# Installation MySQL
-lxc_exec "DEBIAN_FRONTEND=noninteractive apt install -y mysql-server"
-lxc_exec "systemctl enable mysql"
-lxc_exec "systemctl start mysql"
+# Installation MySQL/MariaDB
+echo "📦 Installation de la base de données..."
+lxc_exec "DEBIAN_FRONTEND=noninteractive apt install -y mariadb-server mariadb-client"
+lxc_exec "systemctl enable mariadb"
+lxc_exec "systemctl start mariadb"
+sleep 5
 
 # Installation FFmpeg et autres dépendances
 lxc_exec "apt install -y ffmpeg build-essential python3 make g++ libnss3-dev libatk-bridge2.0-dev libgtk-3-dev libgconf-2-4 libxss1 libasound2-dev"
@@ -43,12 +45,13 @@ lxc_exec "usermod -aG sudo $APP_USER"
 lxc_exec "mkdir -p $APP_DIR"
 lxc_exec "chown $APP_USER:$APP_USER $APP_DIR"
 
-echo "🗄️ Configuration de MySQL..."
+echo "🗄️ Configuration de MariaDB..."
 
-lxc_exec "mysql -e \"CREATE DATABASE $DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\""
-lxc_exec "mysql -e \"CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';\""
-lxc_exec "mysql -e \"GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';\""
-lxc_exec "mysql -e \"FLUSH PRIVILEGES;\""
+# Configuration de la base de données
+lxc_exec "mysql -u root -e \"CREATE DATABASE IF NOT EXISTS $DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\""
+lxc_exec "mysql -u root -e \"CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';\""
+lxc_exec "mysql -u root -e \"GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';\""
+lxc_exec "mysql -u root -e \"FLUSH PRIVILEGES;\""
 
 echo "📁 Copie des fichiers de l'application..."
 
