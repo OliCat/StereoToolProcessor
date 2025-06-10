@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 const SingleFileProcessor = () => {
   const [audioFile, setAudioFile] = useState(null);
   const [preset, setPreset] = useState(null);
-  const [licenseKey, setLicenseKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -25,8 +24,8 @@ const SingleFileProcessor = () => {
     e.preventDefault();
     
     // Validation
-    if (!audioFile || !preset || !licenseKey) {
-      setError('Veuillez fournir tous les champs requis');
+    if (!audioFile || !preset) {
+      setError('Veuillez fournir un fichier audio et un preset');
       return;
     }
 
@@ -39,7 +38,6 @@ const SingleFileProcessor = () => {
       const formData = new FormData();
       formData.append('audioFile', audioFile);
       formData.append('preset', preset);
-      formData.append('licenseKey', licenseKey);
 
       // Vérification de la taille du fichier
       if (audioFile.size > 1024 * 1024 * 50) { // si le fichier fait plus de 50 MB
@@ -113,16 +111,7 @@ const SingleFileProcessor = () => {
           </div>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="licenseKey">Clé de Licence StereoTool</label>
-          <input
-            type="text"
-            id="licenseKey"
-            value={licenseKey}
-            onChange={(e) => setLicenseKey(e.target.value)}
-            placeholder="Entrez votre clé de licence StereoTool (commence par < et se termine par >)"
-          />
-        </div>
+
 
         <div className="infobox">
           <p><strong>Note :</strong> Les fichiers de plus de 30 minutes seront automatiquement traités par segments.</p>

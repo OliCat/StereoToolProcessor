@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 const BatchProcessor = () => {
   const [audioFiles, setAudioFiles] = useState([]);
   const [preset, setPreset] = useState(null);
-  const [licenseKey, setLicenseKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
@@ -25,8 +24,8 @@ const BatchProcessor = () => {
     e.preventDefault();
     
     // Validation
-    if (audioFiles.length === 0 || !preset || !licenseKey) {
-      setError('Veuillez fournir tous les champs requis');
+    if (audioFiles.length === 0 || !preset) {
+      setError('Veuillez fournir des fichiers audio et un preset');
       return;
     }
 
@@ -49,7 +48,6 @@ const BatchProcessor = () => {
       });
       
       formData.append('preset', preset);
-      formData.append('licenseKey', licenseKey);
 
       // Vérification des fichiers volumineux
       const hasLargeFiles = audioFiles.some(file => file.size > 1024 * 1024 * 50);
@@ -138,16 +136,7 @@ const BatchProcessor = () => {
           </div>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="licenseKey">Clé de Licence StereoTool</label>
-          <input
-            type="text"
-            id="licenseKey"
-            value={licenseKey}
-            onChange={(e) => setLicenseKey(e.target.value)}
-            placeholder="Entrez votre clé de licence StereoTool (commence par < et se termine par >)"
-          />
-        </div>
+
 
         <div className="infobox">
           <p><strong>Notes :</strong></p>

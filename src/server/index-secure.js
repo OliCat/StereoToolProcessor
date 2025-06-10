@@ -70,6 +70,9 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Configuration pour les reverse proxy
+app.set('trust proxy', 1);
+
 // Configuration des sessions
 const sessionStore = new SequelizeStore({
   db: sequelize,
@@ -348,6 +351,230 @@ const processFilesInBackground = async (jobs, presetPath, userId) => {
     }
   }
 };
+
+// Route pour traiter un fichier unique
+app.post('/api/process-file', authenticateToken, async (req, res) => {
+  try {
+    const upload = createSecureUpload(req.user.id);
+    
+    upload.fields([
+      { name: 'audioFile', maxCount: 1 },
+      { name: 'preset', maxCount: 1 }
+    ])(req, res, async (err) => {
+      if (err) {
+        logger.error('Erreur d\'upload:', err);
+        return res.status(400).json({
+          error: 'Erreur lors de l\'upload des fichiers',
+          details: err.message
+        });
+      }
+      
+      if (!req.files || !req.files.audioFile || !req.files.preset) {
+        return res.status(400).json({ 
+          error: 'Fichier audio et preset requis' 
+        });
+      }
+      
+      try {
+        const audioFile = req.files.audioFile[0];
+        const preset = req.files.preset[0];
+        const licenseKey = config.stereoTool.license; // Utiliser la licence du config
+        
+        // Déterminer le format de sortie (toujours WAV pour compatibilité)
+        const outputExt = '.wav';
+        const outputFilename = `processed_${path.basename(audioFile.filename, path.extname(audioFile.filename))}${outputExt}`;
+        const outputPath = path.join(__dirname, '../../outputs', outputFilename);
+        
+        // Vérifier si le fichier est long (> 30 min)
+        const isLong = await isLongFile(audioFile.path);
+        
+        if (isLong) {
+          // Traiter le fichier par segments
+          await processFileBySegments(audioFile.path, outputPath, preset.path, licenseKey);
+        } else {
+          // Pour les fichiers courts
+          if (path.extname(audioFile.path).toLowerCase() !== '.wav') {
+            const tempWavPath = path.join(__dirname, '../../temp', `${path.basename(audioFile.filename, path.extname(audioFile.filename))}.wav`);
+            
+            await new Promise((resolve, reject) => {
+              ffmpeg(audioFile.path)
+                .outputOptions([
+                  '-c:a pcm_s16le', // Format PCM 16 bits
+                  '-ar 44100'       // Fréquence d'échantillonnage standard
+                ])
+                .output(tempWavPath)
+                .on('end', resolve)
+                .on('error', reject)
+                .run();
+            });
+            
+            // Traiter avec StereoTool
+            const stereoToolPath = './stereo_tool_mac';
+            const command = `${stereoToolPath} "${tempWavPath}" "${outputPath}" -s "${preset.path}" -k "${licenseKey}"`;
+            await processStereoTool(command);
+            
+            // Nettoyer le fichier temporaire
+            fs.unlinkSync(tempWavPath);
+          } else {
+            // Traiter directement avec StereoTool pour les fichiers WAV
+            const stereoToolPath = './stereo_tool_mac';
+            const command = `${stereoToolPath} "${audioFile.path}" "${outputPath}" -s "${preset.path}" -k "${licenseKey}"`;
+            await processStereoTool(command);
+          }
+        }
+        
+        res.json({
+          success: true,
+          message: 'Fichier traité avec succès',
+          outputFile: `/api/download/${outputFilename}`
+        });
+        
+        logger.info(`Fichier traité avec succès par l'utilisateur ${req.user.id}: ${audioFile.originalname}`);
+        
+      } catch (error) {
+        logger.error('Erreur lors du traitement:', error);
+        res.status(500).json({ 
+          error: 'Erreur lors du traitement audio', 
+          details: error.message 
+        });
+      }
+    });
+    
+  } catch (error) {
+    logger.error('Erreur lors du traitement du fichier:', error);
+    res.status(500).json({
+      error: 'Erreur interne du serveur',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
+// Route pour traiter des fichiers par lot
+app.post('/api/batch-process', authenticateToken, async (req, res) => {
+  try {
+    const upload = createSecureUpload(req.user.id);
+    
+    upload.fields([
+      { name: 'audioFiles', maxCount: 20 },
+      { name: 'preset', maxCount: 1 }
+    ])(req, res, async (err) => {
+      if (err) {
+        logger.error('Erreur d\'upload batch:', err);
+        return res.status(400).json({
+          error: 'Erreur lors de l\'upload des fichiers',
+          details: err.message
+        });
+      }
+      
+      if (!req.files || !req.files.audioFiles || !req.files.preset) {
+        return res.status(400).json({ 
+          error: 'Fichiers audio et preset requis' 
+        });
+      }
+      
+      const audioFiles = req.files.audioFiles;
+      const preset = req.files.preset[0];
+      const licenseKey = config.stereoTool.license; // Utiliser la licence du config
+      const results = [];
+      
+      try {
+        // Traiter chaque fichier de manière séquentielle
+        for (const audioFile of audioFiles) {
+          const outputExt = '.wav';
+          const outputFilename = `processed_${path.basename(audioFile.filename, path.extname(audioFile.filename))}${outputExt}`;
+          const outputPath = path.join(__dirname, '../../outputs', outputFilename);
+          
+          try {
+            // Vérifier si le fichier est long (> 30 min)
+            const isLong = await isLongFile(audioFile.path);
+            
+            if (isLong) {
+              // Traiter le fichier par segments
+              await processFileBySegments(audioFile.path, outputPath, preset.path, licenseKey);
+            } else {
+              // Pour les fichiers courts
+              if (path.extname(audioFile.path).toLowerCase() !== '.wav') {
+                const tempWavPath = path.join(__dirname, '../../temp', `${path.basename(audioFile.filename, path.extname(audioFile.filename))}.wav`);
+                
+                await new Promise((resolve, reject) => {
+                  ffmpeg(audioFile.path)
+                    .outputOptions([
+                      '-c:a pcm_s16le', // Format PCM 16 bits
+                      '-ar 44100'       // Fréquence d'échantillonnage standard
+                    ])
+                    .output(tempWavPath)
+                    .on('end', resolve)
+                    .on('error', reject)
+                    .run();
+                });
+                
+                // Traiter avec StereoTool
+                const stereoToolPath = './stereo_tool_mac';
+                const command = `${stereoToolPath} "${tempWavPath}" "${outputPath}" -s "${preset.path}" -k "${licenseKey}"`;
+                await processStereoTool(command);
+                
+                // Nettoyer le fichier temporaire
+                fs.unlinkSync(tempWavPath);
+              } else {
+                // Traiter directement avec StereoTool pour les fichiers WAV
+                const stereoToolPath = './stereo_tool_mac';
+                const command = `${stereoToolPath} "${audioFile.path}" "${outputPath}" -s "${preset.path}" -k "${licenseKey}"`;
+                await processStereoTool(command);
+              }
+            }
+            
+            results.push({
+              filename: audioFile.originalname,
+              success: true,
+              outputFile: `/api/download/${outputFilename}`
+            });
+            
+          } catch (error) {
+            results.push({
+              filename: audioFile.originalname,
+              success: false,
+              error: error.message
+            });
+          }
+        }
+        
+        res.json({
+          success: true,
+          results
+        });
+        
+        logger.info(`Traitement par lot terminé pour l'utilisateur ${req.user.id}: ${results.length} fichiers`);
+        
+      } catch (error) {
+        logger.error('Erreur lors du traitement par lot:', error);
+        res.status(500).json({ 
+          error: 'Erreur lors du traitement audio', 
+          details: error.message 
+        });
+      }
+    });
+    
+  } catch (error) {
+    logger.error('Erreur lors du traitement par lot:', error);
+    res.status(500).json({
+      error: 'Erreur interne du serveur',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
+// Route pour télécharger un fichier traité
+app.get('/api/download/:filename', authenticateToken, (req, res) => {
+  const filename = req.params.filename;
+  const filePath = path.join(__dirname, '../../outputs', filename);
+  
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Fichier non trouvé' });
+  }
+  
+  res.download(filePath);
+  logger.info(`Téléchargement du fichier ${filename} par l'utilisateur ${req.user.id}`);
+});
 
 // Route pour obtenir le statut des jobs
 app.get('/api/jobs', authenticateToken, async (req, res) => {
