@@ -60,11 +60,26 @@ pct push $CTID package.json $APP_DIR/package.json
 pct push $CTID package-lock.json $APP_DIR/package-lock.json
 pct push $CTID webpack.config.js $APP_DIR/webpack.config.js
 
-# Copier les dossiers
-pct push $CTID src/ $APP_DIR/src/ --recursive
-pct push $CTID public/ $APP_DIR/public/ --recursive
-pct push $CTID scripts/ $APP_DIR/scripts/ --recursive
-pct push $CTID presets/ $APP_DIR/presets/ --recursive
+# Copier les dossiers en utilisant tar
+echo "📦 Copie des dossiers (src, public, scripts, presets)..."
+tar -czf /tmp/src.tar.gz src/
+tar -czf /tmp/public.tar.gz public/
+tar -czf /tmp/scripts.tar.gz scripts/
+tar -czf /tmp/presets.tar.gz presets/
+
+pct push $CTID /tmp/src.tar.gz $APP_DIR/src.tar.gz
+pct push $CTID /tmp/public.tar.gz $APP_DIR/public.tar.gz
+pct push $CTID /tmp/scripts.tar.gz $APP_DIR/scripts.tar.gz
+pct push $CTID /tmp/presets.tar.gz $APP_DIR/presets.tar.gz
+
+# Extraire les archives dans le container
+lxc_exec "cd $APP_DIR && tar -xzf src.tar.gz && rm src.tar.gz"
+lxc_exec "cd $APP_DIR && tar -xzf public.tar.gz && rm public.tar.gz"
+lxc_exec "cd $APP_DIR && tar -xzf scripts.tar.gz && rm scripts.tar.gz"
+lxc_exec "cd $APP_DIR && tar -xzf presets.tar.gz && rm presets.tar.gz"
+
+# Nettoyer les fichiers temporaires
+rm -f /tmp/src.tar.gz /tmp/public.tar.gz /tmp/scripts.tar.gz /tmp/presets.tar.gz
 
 # Copier le binaire StereoTool (adapter selon votre plateforme)
 if [ -f "stereo_tool_linux_x64" ]; then
