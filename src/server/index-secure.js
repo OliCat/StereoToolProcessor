@@ -18,6 +18,8 @@ const config = require('../../config');
 const { sequelize, User, ProcessingJob } = require('./models');
 const { authenticateToken, requireRole, apiLimiter } = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
+const filesRoutes = require('./routes/files');
+const diskUsageRoutes = require('./routes/disk-usage');
 
 // Configuration des logs
 const logger = winston.createLogger({
@@ -90,6 +92,10 @@ app.use('/api/', apiLimiter);
 
 // Routes d'authentification
 app.use('/api/auth', authRoutes);
+
+// Routes de gestion des fichiers
+app.use('/api/files', filesRoutes);
+app.use('/api/disk-usage', diskUsageRoutes);
 
 // Servir les fichiers statiques (uniquement après authentification pour les ressources sensibles)
 app.use(express.static(path.join(__dirname, '../../public')));
