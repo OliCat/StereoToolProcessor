@@ -244,4 +244,79 @@ router.post('/download-multiple', authenticateToken, async (req, res) => {
   }
 });
 
+// Route pour obtenir les métadonnées d'un fichier
+router.get('/:filename/metadata', authenticateToken, async (req, res) => {
+  try {
+    const filename = decodeURIComponent(req.params.filename);
+    const filePath = path.join(OUTPUTS_DIR, filename);
+    
+    // Vérifier que le fichier existe
+    await fs.access(filePath);
+    
+    // Pour l'instant, on retourne des métadonnées vides ou extraites du nom de fichier
+    // TODO: Intégrer une vraie lecture des métadonnées audio
+    const metadata = {
+      trackNumber: "",
+      album: "",
+      title: filename.replace(/^processed_\d+_[a-f0-9-]+_/, '').replace(/\.[^/.]+$/, ''),
+      artist: ""
+    };
+    
+    res.json({
+      filename,
+      metadata
+    });
+    
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      res.status(404).json({
+        error: 'Fichier non trouvé'
+      });
+    } else {
+      console.error('Erreur lors de la lecture des métadonnées:', error);
+      res.status(500).json({
+        error: 'Erreur lors de la lecture des métadonnées'
+      });
+    }
+  }
+});
+
+// Route pour mettre à jour les métadonnées d'un fichier
+router.put('/:filename/metadata', authenticateToken, async (req, res) => {
+  try {
+    const filename = decodeURIComponent(req.params.filename);
+    const { trackNumber, album, title, artist } = req.body;
+    const filePath = path.join(OUTPUTS_DIR, filename);
+    
+    // Vérifier que le fichier existe
+    await fs.access(filePath);
+    
+    // Créer le nouveau nom de fichier basé sur les métadonnées
+    const extension = path.extname(filename);
+    const newFilename = `${trackNumber.padStart(2, '0')} - ${album} - ${title} - ${artist}${extension}`;
+    const newFilePath = path.join(OUTPUTS_DIR, newFilename);
+    
+    // Renommer le fichier
+    await fs.rename(filePath, newFilePath);
+    
+    res.json({
+      message: 'Métadonnées mises à jour avec succès',
+      newFilename,
+      newDownloadUrl: `/api/download/${encodeURIComponent(newFilename)}`
+    });
+    
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      res.status(404).json({
+        error: 'Fichier non trouvé'
+      });
+    } else {
+      console.error('Erreur lors de la mise à jour des métadonnées:', error);
+      res.status(500).json({
+        error: 'Erreur lors de la mise à jour des métadonnées'
+      });
+    }
+  }
+});
+
 module.exports = router; 

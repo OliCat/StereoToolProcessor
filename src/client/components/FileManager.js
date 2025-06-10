@@ -22,6 +22,7 @@ const FileManager = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [downloadingFile, setDownloadingFile] = useState(null);
   const [cleaningUploads, setCleaningUploads] = useState(false);
   const [diskUsage, setDiskUsage] = useState(null);
   const [loadingDiskUsage, setLoadingDiskUsage] = useState(false);
@@ -50,6 +51,9 @@ const FileManager = () => {
   // Télécharger un fichier individuel
   const handleDownload = async (filename) => {
     try {
+      setDownloadingFile(filename);
+      setError(null);
+      
       const token = localStorage.getItem('accessToken');
       const response = await authenticatedFetch(`/api/download/${filename}`);
 
@@ -68,7 +72,14 @@ const FileManager = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      
+      // Petite pause pour que l'utilisateur voie le message
+      setTimeout(() => {
+        setDownloadingFile(null);
+      }, 1000);
+      
     } catch (error) {
+      setDownloadingFile(null);
       setError('Erreur lors du téléchargement: ' + error.message);
     }
   };
@@ -551,7 +562,7 @@ const FileManager = () => {
                       onChange={() => handleSelectFile(file.filename)}
                     />
                   </td>
-                  <td>{file.originalName}</td>
+                  <td>{file.filename}</td>
                   <td>{formatFileSize(file.size)}</td>
                   <td>{formatDate(file.createdAt)}</td>
                   <td className="file-actions">
@@ -559,8 +570,9 @@ const FileManager = () => {
                       onClick={() => handleDownload(file.filename)}
                       className="btn btn-sm" 
                       title="Télécharger"
+                      disabled={downloadingFile === file.filename}
                     >
-                      📥
+                      {downloadingFile === file.filename ? '⏳' : '📥'}
                     </button>
                     <button 
                       onClick={() => openMetadataEditor(file)}

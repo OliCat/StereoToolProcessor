@@ -6,9 +6,9 @@ const { authenticateToken } = require('../middleware/auth');
 const router = express.Router();
 
 // Chemins des dossiers
-const UPLOADS_DIR = path.join(__dirname, '../../uploads');
-const OUTPUTS_DIR = path.join(__dirname, '../../outputs');
-const TEMP_DIR = path.join(__dirname, '../../temp');
+const UPLOADS_DIR = path.join(__dirname, '../../../uploads');
+const OUTPUTS_DIR = path.join(__dirname, '../../../outputs');
+const TEMP_DIR = path.join(__dirname, '../../../temp');
 
 // Helper pour obtenir les stats d'un dossier
 const getDirStats = async (dirPath) => {
