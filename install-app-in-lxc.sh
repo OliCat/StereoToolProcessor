@@ -185,7 +185,6 @@ module.exports = {
     name: 'stereo-tool-processor',
     script: 'src/server/index-secure.js',
     cwd: '/opt/stereo-tool-processor',
-    user: 'stereoapp',
     instances: 2,
     exec_mode: 'cluster',
     env: {
