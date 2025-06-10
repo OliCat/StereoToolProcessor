@@ -22,43 +22,33 @@ lxc_exec() {
 echo "📦 Installation des dépendances système..."
 
 # Installation Node.js 18.x
-lxc_exec "
-curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-apt install -y nodejs
-"
+lxc_exec "curl -fsSL https://deb.nodesource.com/setup_18.x | bash -"
+lxc_exec "apt install -y nodejs"
 
 # Installation MySQL
-lxc_exec "
-DEBIAN_FRONTEND=noninteractive apt install -y mysql-server
-systemctl enable mysql
-systemctl start mysql
-"
+lxc_exec "DEBIAN_FRONTEND=noninteractive apt install -y mysql-server"
+lxc_exec "systemctl enable mysql"
+lxc_exec "systemctl start mysql"
 
 # Installation FFmpeg et autres dépendances
-lxc_exec "
-apt install -y ffmpeg build-essential python3 make g++ libnss3-dev libatk-bridge2.0-dev libgtk-3-dev libgconf-2-4 libxss1 libasound2-dev
-"
+lxc_exec "apt install -y ffmpeg build-essential python3 make g++ libnss3-dev libatk-bridge2.0-dev libgtk-3-dev libgconf-2-4 libxss1 libasound2-dev"
 
 # Installation PM2 globalement
 lxc_exec "npm install -g pm2"
 
 echo "👤 Création de l'utilisateur application..."
 
-lxc_exec "
-useradd -m -s /bin/bash $APP_USER
-usermod -aG sudo $APP_USER
-mkdir -p $APP_DIR
-chown $APP_USER:$APP_USER $APP_DIR
-"
+lxc_exec "useradd -m -s /bin/bash $APP_USER"
+lxc_exec "usermod -aG sudo $APP_USER"
+lxc_exec "mkdir -p $APP_DIR"
+lxc_exec "chown $APP_USER:$APP_USER $APP_DIR"
 
 echo "🗄️ Configuration de MySQL..."
 
-lxc_exec "
-mysql -e \"CREATE DATABASE $DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\"
-mysql -e \"CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';\"
-mysql -e \"GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';\"
-mysql -e \"FLUSH PRIVILEGES;\"
-"
+lxc_exec "mysql -e \"CREATE DATABASE $DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\""
+lxc_exec "mysql -e \"CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';\""
+lxc_exec "mysql -e \"GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';\""
+lxc_exec "mysql -e \"FLUSH PRIVILEGES;\""
 
 echo "📁 Copie des fichiers de l'application..."
 
@@ -88,16 +78,15 @@ echo "⚙️ Configuration de l'application..."
 
 lxc_exec "chown -R $APP_USER:$APP_USER $APP_DIR"
 
-# Configuration du fichier config.js
-lxc_exec "
-cat > $APP_DIR/config.js << 'EOF'
+# Configuration du fichier config.js - créer le fichier localement puis le copier
+cat > /tmp/config_lxc.js << 'EOF'
 module.exports = {
   database: {
     host: 'localhost',
     port: 3306,
-    name: '$DB_NAME',
-    username: '$DB_USER',
-    password: '$DB_PASS',
+    name: 'stereo_tool_app',
+    username: 'stereo_user',
+    password: 'StereoTool2024!SecureDB',
     dialect: 'mysql'
   },
 
@@ -110,12 +99,12 @@ module.exports = {
   server: {
     port: 3000,
     environment: 'production',
-    host: '0.0.0.0'  // Écouter sur toutes les interfaces
+    host: '0.0.0.0'
   },
 
   stereoTool: {
     license: 'VOTRE_LICENCE_STEREOTOOL_ICI',
-    executablePath: '$APP_DIR/stereo_tool_linux_x64'
+    executablePath: '/opt/stereo-tool-processor/stereo_tool_linux_x64'
   },
 
   organization: {
@@ -125,7 +114,7 @@ module.exports = {
   },
 
   limits: {
-    maxFileSize: 100 * 1024 * 1024, // 100MB
+    maxFileSize: 100 * 1024 * 1024,
     maxFilesPerUser: 10,
     maxProcessingTime: 30 * 60 * 1000,
     rateLimitWindowMs: 15 * 60 * 1000,
@@ -133,48 +122,44 @@ module.exports = {
   },
 
   paths: {
-    uploads: '$APP_DIR/uploads',
-    outputs: '$APP_DIR/outputs',
-    temp: '$APP_DIR/temp',
-    presets: '$APP_DIR/presets'
+    uploads: '/opt/stereo-tool-processor/uploads',
+    outputs: '/opt/stereo-tool-processor/outputs',
+    temp: '/opt/stereo-tool-processor/temp',
+    presets: '/opt/stereo-tool-processor/presets'
   }
 };
 EOF
-"
+
+pct push $CTID /tmp/config_lxc.js $APP_DIR/config.js
+rm /tmp/config_lxc.js
 
 # Installation des dépendances Node.js
-lxc_exec "
-cd $APP_DIR
-sudo -u $APP_USER npm install --production
-sudo -u $APP_USER npm run build
-"
+lxc_exec "cd $APP_DIR && sudo -u $APP_USER npm install --production"
+lxc_exec "cd $APP_DIR && sudo -u $APP_USER npm run build"
 
 # Création des dossiers nécessaires
-lxc_exec "
-mkdir -p $APP_DIR/{uploads,outputs,temp,logs}
-chown -R $APP_USER:$APP_USER $APP_DIR
-"
+lxc_exec "mkdir -p $APP_DIR/uploads $APP_DIR/outputs $APP_DIR/temp $APP_DIR/logs"
+lxc_exec "chown -R $APP_USER:$APP_USER $APP_DIR"
 
 echo "🚀 Configuration PM2..."
 
-# Configuration PM2
-lxc_exec "
-cat > $APP_DIR/ecosystem.config.js << 'EOF'
+# Configuration PM2 - créer le fichier localement puis le copier
+cat > /tmp/ecosystem_lxc.config.js << 'EOF'
 module.exports = {
   apps: [{
     name: 'stereo-tool-processor',
     script: 'src/server/index-secure.js',
-    cwd: '$APP_DIR',
-    user: '$APP_USER',
+    cwd: '/opt/stereo-tool-processor',
+    user: 'stereoapp',
     instances: 2,
     exec_mode: 'cluster',
     env: {
       NODE_ENV: 'production',
       PORT: 3000
     },
-    log_file: '$APP_DIR/logs/combined.log',
-    out_file: '$APP_DIR/logs/out.log',
-    error_file: '$APP_DIR/logs/error.log',
+    log_file: '/opt/stereo-tool-processor/logs/combined.log',
+    out_file: '/opt/stereo-tool-processor/logs/out.log',
+    error_file: '/opt/stereo-tool-processor/logs/error.log',
     log_date_format: 'YYYY-MM-DD HH:mm:ss',
     max_restarts: 10,
     min_uptime: '10s',
@@ -183,47 +168,46 @@ module.exports = {
   }]
 };
 EOF
-"
+
+pct push $CTID /tmp/ecosystem_lxc.config.js $APP_DIR/ecosystem.config.js
+rm /tmp/ecosystem_lxc.config.js
 
 # Démarrage de l'application avec PM2
-lxc_exec "
-cd $APP_DIR
-sudo -u $APP_USER pm2 start ecosystem.config.js
-sudo -u $APP_USER pm2 save
-sudo -u $APP_USER pm2 startup systemd -u $APP_USER --hp /home/$APP_USER
-"
+lxc_exec "cd $APP_DIR && sudo -u $APP_USER pm2 start ecosystem.config.js"
+lxc_exec "sudo -u $APP_USER pm2 save"
+lxc_exec "sudo -u $APP_USER pm2 startup systemd -u $APP_USER --hp /home/$APP_USER"
 
 echo "🔥 Configuration du firewall..."
 
-lxc_exec "
-ufw default deny incoming
-ufw default allow outgoing
-ufw allow 3000/tcp
-ufw allow 22/tcp
-ufw --force enable
-"
+lxc_exec "ufw default deny incoming"
+lxc_exec "ufw default allow outgoing"
+lxc_exec "ufw allow 3000/tcp"
+lxc_exec "ufw allow 22/tcp"
+lxc_exec "ufw --force enable"
 
 echo "📝 Configuration des logs..."
 
-lxc_exec "
-cat > /etc/logrotate.d/stereo-tool << 'EOF'
-$APP_DIR/logs/*.log {
+# Configuration logrotate - créer le fichier localement puis le copier
+cat > /tmp/logrotate_stereo << 'EOF'
+/opt/stereo-tool-processor/logs/*.log {
     daily
     missingok
     rotate 14
     compress
     notifempty
-    create 0644 $APP_USER $APP_USER
+    create 0644 stereoapp stereoapp
     postrotate
-        sudo -u $APP_USER pm2 reloadLogs
+        sudo -u stereoapp pm2 reloadLogs
     endscript
 }
 EOF
-"
+
+pct push $CTID /tmp/logrotate_stereo /etc/logrotate.d/stereo-tool
+rm /tmp/logrotate_stereo
 
 echo "✅ Installation terminée !"
 echo ""
-echo "🎯 Application accessible sur: http://10.10.10.50:3000"
+echo "🎯 Application accessible sur: http://10.10.10.X:3000 (remplacez X par votre IP)"
 echo "👤 Utilisateur application: $APP_USER"
 echo "📁 Répertoire application: $APP_DIR"
 echo "🗄️ Base de données: $DB_NAME"

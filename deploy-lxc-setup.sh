@@ -42,10 +42,8 @@ sleep 10
 echo "🔧 Configuration initiale du container..."
 
 # Mise à jour du système
-pct exec $CTID -- bash -c "
-apt update && apt upgrade -y
-apt install -y curl wget git nano htop sudo ufw fail2ban logrotate
-"
+pct exec $CTID -- bash -c "apt update && apt upgrade -y"
+pct exec $CTID -- bash -c "apt install -y curl wget git nano htop sudo ufw fail2ban logrotate"
 
 echo "✅ Configuration de base terminée"
 echo "🎯 Container LXC prêt à l'adresse: $IP_ADDRESS"
