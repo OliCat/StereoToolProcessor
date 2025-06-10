@@ -46,8 +46,12 @@ const SingleFileProcessor = () => {
         setProcessing({ status: 'Le fichier est volumineux, traitement par segments en cours...', progress: 10 });
       }
 
+      const token = localStorage.getItem('accessToken');
       const response = await fetch('/api/process-file', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData
       });
 

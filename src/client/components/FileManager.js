@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import MetadataEditor from './MetadataEditor';
 
+// Helper pour faire des requêtes authentifiées
+const authenticatedFetch = (url, options = {}) => {
+  const token = localStorage.getItem('accessToken');
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      'Authorization': `Bearer ${token}`
+    }
+  });
+};
+
 const FileManager = () => {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +51,7 @@ const FileManager = () => {
   const loadFiles = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/files');
+      const response = await authenticatedFetch('/api/files');
       const data = await response.json();
 
       if (response.ok) {
@@ -62,7 +74,7 @@ const FileManager = () => {
   const loadDiskUsage = async () => {
     try {
       setLoadingDiskUsage(true);
-      const response = await fetch('/api/disk-usage');
+      const response = await authenticatedFetch('/api/disk-usage');
       const data = await response.json();
 
       if (response.ok) {
@@ -84,7 +96,7 @@ const FileManager = () => {
     }
 
     try {
-      const response = await fetch(`/api/files/${encodeURIComponent(filename)}`, {
+      const response = await authenticatedFetch(`/api/files/${encodeURIComponent(filename)}`, {
         method: 'DELETE'
       });
 
@@ -159,7 +171,7 @@ const FileManager = () => {
       setDownloading(true);
       
       // Effectuer une requête pour créer le ZIP
-      const response = await fetch('/api/download-multiple', {
+      const response = await authenticatedFetch('/api/download-multiple', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -225,7 +237,7 @@ const FileManager = () => {
       // Supprimer chaque fichier sélectionné
       for (const filename of selectedFiles) {
         try {
-          const response = await fetch(`/api/files/${encodeURIComponent(filename)}`, {
+          const response = await authenticatedFetch(`/api/files/${encodeURIComponent(filename)}`, {
             method: 'DELETE'
           });
           
@@ -308,7 +320,7 @@ const FileManager = () => {
     try {
       setCleaningUploads(true);
       
-      const response = await fetch('/api/clean-uploads', {
+      const response = await authenticatedFetch('/api/clean-uploads', {
         method: 'POST',
       });
       

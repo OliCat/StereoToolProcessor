@@ -61,8 +61,12 @@ const BatchProcessor = () => {
         });
       }
 
+      const token = localStorage.getItem('accessToken');
       const response = await fetch('/api/batch-process', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData
       });
 
