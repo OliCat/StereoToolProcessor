@@ -1,11 +1,12 @@
 #!/bin/bash
 
 # Installation de StereoTool Processor dans LXC Debian
-# Usage: ./install-app-in-lxc.sh <CTID>
+# Usage: ./install-app-in-lxc.sh <CTID> [--clean]
 
 set -e
 
 CTID=${1:-200}
+CLEAN_INSTALL=${2}
 APP_USER="stereoapp"
 APP_DIR="/opt/stereo-tool-processor"
 DB_NAME="stereo_tool_app"
@@ -13,6 +14,19 @@ DB_USER="stereo_user"
 DB_PASS="StereoTool2024!SecureDB"
 
 echo "🚀 Installation de StereoTool Processor dans le container LXC $CTID"
+
+# Option de nettoyage complet
+if [ "$CLEAN_INSTALL" = "--clean" ]; then
+    echo "🧹 Nettoyage complet demandé..."
+    lxc_exec() { pct exec $CTID -- bash -c "$1"; }
+    lxc_exec "sudo -u $APP_USER pm2 delete all 2>/dev/null || true"
+    lxc_exec "sudo -u $APP_USER pm2 kill 2>/dev/null || true"
+    lxc_exec "rm -rf $APP_DIR" || true
+    lxc_exec "mysql -u root -e 'DROP DATABASE IF EXISTS $DB_NAME;'" || true
+    lxc_exec "mysql -u root -e 'DROP USER IF EXISTS '$DB_USER'@'localhost';'" || true
+    lxc_exec "userdel -r $APP_USER 2>/dev/null" || true
+    echo "✅ Nettoyage terminé"
+fi
 
 # Fonction pour exécuter des commandes dans le container
 lxc_exec() {
@@ -40,7 +54,8 @@ lxc_exec "npm install -g pm2"
 
 echo "👤 Création de l'utilisateur application..."
 
-lxc_exec "useradd -m -s /bin/bash $APP_USER"
+# Créer l'utilisateur seulement s'il n'existe pas déjà
+lxc_exec "id $APP_USER >/dev/null 2>&1 || useradd -m -s /bin/bash $APP_USER"
 lxc_exec "usermod -aG sudo $APP_USER"
 lxc_exec "mkdir -p $APP_DIR"
 lxc_exec "chown $APP_USER:$APP_USER $APP_DIR"
@@ -191,9 +206,10 @@ pct push $CTID /tmp/ecosystem_lxc.config.js $APP_DIR/ecosystem.config.js
 rm /tmp/ecosystem_lxc.config.js
 
 # Démarrage de l'application avec PM2
+lxc_exec "cd $APP_DIR && sudo -u $APP_USER pm2 delete stereo-tool-processor 2>/dev/null || true"
 lxc_exec "cd $APP_DIR && sudo -u $APP_USER pm2 start ecosystem.config.js"
 lxc_exec "sudo -u $APP_USER pm2 save"
-lxc_exec "sudo -u $APP_USER pm2 startup systemd -u $APP_USER --hp /home/$APP_USER"
+lxc_exec "sudo -u $APP_USER pm2 startup systemd -u $APP_USER --hp /home/$APP_USER || true"
 
 echo "🔥 Configuration du firewall..."
 
