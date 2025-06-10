@@ -357,7 +357,7 @@ const FileManager = () => {
     try {
       setCleaningUploads(true);
       
-      const response = await authenticatedFetch('/api/clean-uploads', {
+              const response = await authenticatedFetch('/api/files/clean-uploads', {
         method: 'POST',
       });
       

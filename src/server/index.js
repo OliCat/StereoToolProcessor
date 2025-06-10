@@ -427,40 +427,7 @@ app.get('/api/files', (req, res) => {
   }
 });
 
-// Route pour nettoyer les fichiers importés dans le dossier uploads
-app.post('/api/clean-uploads', (req, res) => {
-  const uploadsDir = path.join(__dirname, '../../uploads');
-  
-  try {
-    // Vérifier si le dossier existe
-    if (!fs.existsSync(uploadsDir)) {
-      return res.json({ success: true, message: 'Aucun fichier à nettoyer' });
-    }
-    
-    // Lire le contenu du dossier
-    const files = fs.readdirSync(uploadsDir)
-      .filter(file => !file.startsWith('.')); // Ignorer les fichiers cachés
-    
-    // Supprimer tous les fichiers
-    let deletedCount = 0;
-    for (const file of files) {
-      const filePath = path.join(uploadsDir, file);
-      fs.unlinkSync(filePath);
-      deletedCount++;
-    }
-    
-    res.json({ 
-      success: true, 
-      message: `${deletedCount} fichier(s) importé(s) supprimé(s) avec succès` 
-    });
-  } catch (error) {
-    console.error('Erreur lors du nettoyage des fichiers importés:', error);
-    res.status(500).json({ 
-      error: 'Erreur lors du nettoyage des fichiers importés', 
-      details: error.message 
-    });
-  }
-});
+
 
 // Route pour obtenir des statistiques sur l'utilisation disque
 app.get('/api/disk-usage', (req, res) => {
