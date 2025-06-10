@@ -4,6 +4,7 @@ const SingleFileProcessor = () => {
   const [audioFile, setAudioFile] = useState(null);
   const [preset, setPreset] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [processing, setProcessing] = useState({ status: '', progress: 0 });
@@ -22,6 +23,9 @@ const SingleFileProcessor = () => {
 
   const handleDownload = async (downloadUrl) => {
     try {
+      setDownloading(true);
+      setError(null);
+      
       const token = localStorage.getItem('accessToken');
       const response = await fetch(downloadUrl, {
         headers: {
@@ -47,7 +51,14 @@ const SingleFileProcessor = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      
+      // Notifier que le téléchargement a commencé avec succès
+      setTimeout(() => {
+        setDownloading(false);
+      }, 1000); // Petite pause pour que l'utilisateur voie le message
+      
     } catch (error) {
+      setDownloading(false);
       setError('Erreur lors du téléchargement: ' + error.message);
     }
   };
@@ -92,6 +103,12 @@ const SingleFileProcessor = () => {
       }
 
       setResult(data);
+      
+      // Notifier le gestionnaire de fichiers qu'un nouveau fichier a été traité
+      window.dispatchEvent(new CustomEvent('file-processed', { 
+        detail: { filename: data.outputFile ? data.outputFile.split('/').pop() : null }
+      }));
+      
     } catch (err) {
       setError(err.message);
     } finally {
@@ -143,8 +160,6 @@ const SingleFileProcessor = () => {
           </div>
         </div>
 
-
-
         <div className="infobox">
           <p><strong>Note :</strong> Les fichiers de plus de 30 minutes seront automatiquement traités par segments.</p>
           <p><strong>Format de sortie :</strong> Tous les fichiers seront convertis au format WAV pour une meilleure compatibilité avec les applications audio.</p>
@@ -177,8 +192,9 @@ const SingleFileProcessor = () => {
             <button 
               className="btn"
               onClick={() => handleDownload(result.outputFile)}
+              disabled={downloading}
             >
-              Télécharger le Fichier Traité
+              {downloading ? 'Téléchargement en cours...' : 'Télécharger le Fichier Traité'}
             </button>
             <button 
               className="btn btn-secondary"
@@ -187,6 +203,12 @@ const SingleFileProcessor = () => {
               Voir tous les fichiers
             </button>
           </div>
+          {downloading && (
+            <div className="loading">
+              <div className="loader"></div>
+              <p>Préparation du téléchargement...</p>
+            </div>
+          )}
         </div>
       )}
     </div>

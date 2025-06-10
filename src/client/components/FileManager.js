@@ -385,6 +385,29 @@ const FileManager = () => {
   useEffect(() => {
     loadFiles();
     loadDiskUsage();
+    
+    // Écouter les événements de navigation et de nouveau fichier traité
+    const handleNavigateToFiles = () => {
+      loadFiles();
+      loadDiskUsage();
+    };
+    
+    const handleFileProcessed = () => {
+      // Recharger la liste des fichiers avec un léger délai pour laisser le temps au serveur
+      setTimeout(() => {
+        loadFiles();
+        loadDiskUsage();
+      }, 1000);
+    };
+    
+    window.addEventListener('navigate-to-files', handleNavigateToFiles);
+    window.addEventListener('file-processed', handleFileProcessed);
+    
+    // Nettoyer les événements lors du démontage du composant
+    return () => {
+      window.removeEventListener('navigate-to-files', handleNavigateToFiles);
+      window.removeEventListener('file-processed', handleFileProcessed);
+    };
   }, []);
 
   return (

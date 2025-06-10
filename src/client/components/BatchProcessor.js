@@ -107,6 +107,15 @@ const BatchProcessor = () => {
       }
 
       setResults(data.results);
+      
+      // Notifier le gestionnaire de fichiers que de nouveaux fichiers ont été traités
+      window.dispatchEvent(new CustomEvent('file-processed', { 
+        detail: { 
+          count: data.results.filter(r => r.success).length,
+          filenames: data.results.filter(r => r.success).map(r => r.outputFile ? r.outputFile.split('/').pop() : null)
+        }
+      }));
+      
     } catch (err) {
       setError(err.message);
     } finally {
