@@ -11,7 +11,7 @@ APP_USER="stereoapp"
 APP_DIR="/opt/stereo-tool-processor"
 DB_NAME="stereo_tool_app"
 DB_USER="stereo_user"
-DB_PASS="StereoTool2024!SecureDB"
+DB_PASS="StereoTool2024SecureDB"
 
 echo "🚀 Installation de StereoTool Processor dans le container LXC $CTID"
 
@@ -117,7 +117,7 @@ module.exports = {
     port: 3306,
     name: 'stereo_tool_app',
     username: 'stereo_user',
-    password: 'StereoTool2024!SecureDB',
+    password: 'StereoTool2024SecureDB',
     dialect: 'mysql'
   },
 
