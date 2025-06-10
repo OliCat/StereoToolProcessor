@@ -47,6 +47,32 @@ const FileManager = () => {
     });
   };
 
+  // Télécharger un fichier individuel
+  const handleDownload = async (filename) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await authenticatedFetch(`/api/download/${filename}`);
+
+      if (!response.ok) {
+        throw new Error('Erreur lors du téléchargement');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename;
+      
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      setError('Erreur lors du téléchargement: ' + error.message);
+    }
+  };
+
   // Charger la liste des fichiers
   const loadFiles = async () => {
     try {
@@ -506,14 +532,13 @@ const FileManager = () => {
                   <td>{formatFileSize(file.size)}</td>
                   <td>{formatDate(file.createdAt)}</td>
                   <td className="file-actions">
-                    <a 
-                      href={file.downloadUrl} 
+                    <button 
+                      onClick={() => handleDownload(file.filename)}
                       className="btn btn-sm" 
-                      download
                       title="Télécharger"
                     >
                       📥
-                    </a>
+                    </button>
                     <button 
                       onClick={() => openMetadataEditor(file)}
                       className="btn btn-sm btn-edit"
