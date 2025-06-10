@@ -113,7 +113,7 @@ lxc_exec "chown -R $APP_USER:$APP_USER $APP_DIR"
 cat > /tmp/config_lxc.js << 'EOF'
 module.exports = {
   database: {
-    host: 'localhost',
+    host: '127.0.0.1',
     port: 3306,
     name: 'stereo_tool_app',
     username: 'stereo_user',
