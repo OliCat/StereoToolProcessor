@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');
+const ffmpeg = require('fluent-ffmpeg');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -253,18 +254,33 @@ router.get('/:filename/metadata', authenticateToken, async (req, res) => {
     // Vérifier que le fichier existe
     await fs.access(filePath);
     
-    // Pour l'instant, on retourne des métadonnées vides ou extraites du nom de fichier
-    // TODO: Intégrer une vraie lecture des métadonnées audio
-    const metadata = {
-      trackNumber: "",
-      album: "",
-      title: filename.replace(/^processed_\d+_[a-f0-9-]+_/, '').replace(/\.[^/.]+$/, ''),
-      artist: ""
+    // Récupérer les métadonnées avec ffprobe
+    const metadata = await new Promise((resolve, reject) => {
+      ffmpeg.ffprobe(filePath, (err, data) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(data);
+      });
+    });
+    
+    // Extraire les métadonnées pertinentes
+    const tags = metadata.format.tags || {};
+    
+    const extractedMetadata = {
+      trackNumber: tags.track || '',
+      album: tags.album || '',
+      title: tags.title || filename.replace(/^processed_\d+_[a-f0-9-]+_/, '').replace(/\.[^/.]+$/, ''),
+      artist: tags.artist || '',
+      duration: metadata.format.duration || 0,
+      sampleRate: metadata.streams[0]?.sample_rate || '',
+      channels: metadata.streams[0]?.channels || ''
     };
     
     res.json({
       filename,
-      metadata
+      metadata: extractedMetadata
     });
     
   } catch (error) {
@@ -286,21 +302,56 @@ router.put('/:filename/metadata', authenticateToken, async (req, res) => {
   try {
     const filename = decodeURIComponent(req.params.filename);
     const { trackNumber, album, title, artist } = req.body;
+    
+    if (!trackNumber || !album || !title || !artist) {
+      return res.status(400).json({ error: 'Tous les champs de métadonnées sont requis' });
+    }
+    
     const filePath = path.join(OUTPUTS_DIR, filename);
     
     // Vérifier que le fichier existe
     await fs.access(filePath);
     
-    // Créer le nouveau nom de fichier basé sur les métadonnées
+    // Format du nouveau nom: "N° de Piste - ALBUM - TITRE - Artiste.wav"
+    // Éviter les caractères spéciaux dans le nom de fichier
+    const sanitizedFilename = `${trackNumber.padStart(2, '0')} - ${album} - ${title} - ${artist}`
+      .replace(/[\/\\:*?"<>|]/g, '-') // Remplacer les caractères interdits par des tirets
+      .trim();
+    
     const extension = path.extname(filename);
-    const newFilename = `${trackNumber.padStart(2, '0')} - ${album} - ${title} - ${artist}${extension}`;
+    const newFilename = `${sanitizedFilename}${extension}`;
     const newFilePath = path.join(OUTPUTS_DIR, newFilename);
     
-    // Renommer le fichier
-    await fs.rename(filePath, newFilePath);
+    // Appliquer les métadonnées avec ffmpeg
+    const ffmpegCommand = ffmpeg(filePath);
+    
+    // Copier l'audio sans le recompresser
+    ffmpegCommand.outputOptions('-c:a copy');
+    
+    // Ajouter les métadonnées individuellement (de cette façon on évite les problèmes d'espaces)
+    ffmpegCommand.outputOptions('-metadata', `track=${trackNumber}`);
+    ffmpegCommand.outputOptions('-metadata', `album=${album}`);
+    ffmpegCommand.outputOptions('-metadata', `title=${title}`);
+    ffmpegCommand.outputOptions('-metadata', `artist=${artist}`);
+    
+    // Définir le fichier de sortie
+    ffmpegCommand.output(newFilePath);
+    
+    // Exécuter la commande
+    await new Promise((resolve, reject) => {
+      ffmpegCommand
+        .on('end', resolve)
+        .on('error', reject)
+        .run();
+    });
+    
+    // Supprimer le fichier original si les noms sont différents
+    if (filePath !== newFilePath) {
+      await fs.unlink(filePath);
+    }
     
     res.json({
-      message: 'Métadonnées mises à jour avec succès',
+      message: 'Métadonnées appliquées et fichier renommé avec succès',
       newFilename,
       newDownloadUrl: `/api/download/${encodeURIComponent(newFilename)}`
     });

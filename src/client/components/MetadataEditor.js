@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
 
+// Helper pour faire des requêtes authentifiées
+const authenticatedFetch = (url, options = {}) => {
+  const token = localStorage.getItem('accessToken');
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      'Authorization': `Bearer ${token}`
+    }
+  });
+};
+
 const MetadataEditor = ({ file, onClose, onSuccess }) => {
   const [metadata, setMetadata] = useState({
     trackNumber: '',
@@ -19,7 +31,7 @@ const MetadataEditor = ({ file, onClose, onSuccess }) => {
       
       try {
         setLoading(true);
-        const response = await fetch(`/api/files/${encodeURIComponent(file.filename)}/metadata`);
+        const response = await authenticatedFetch(`/api/files/${encodeURIComponent(file.filename)}/metadata`);
         const data = await response.json();
 
         if (response.ok) {
@@ -67,7 +79,7 @@ const MetadataEditor = ({ file, onClose, onSuccess }) => {
       setSaving(true);
       setError(null);
       
-      const response = await fetch(`/api/files/${encodeURIComponent(file.filename)}/metadata`, {
+      const response = await authenticatedFetch(`/api/files/${encodeURIComponent(file.filename)}/metadata`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
