@@ -20,6 +20,38 @@ const BatchProcessor = () => {
     }
   };
 
+  const handleDownload = async (downloadUrl) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(downloadUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors du téléchargement');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      
+      // Extraire le nom du fichier depuis l'URL
+      const filename = downloadUrl.split('/').pop();
+      a.download = filename;
+      
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      setError('Erreur lors du téléchargement: ' + error.message);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -190,13 +222,12 @@ const BatchProcessor = () => {
                 <div>{result.success ? 'Traité avec succès' : `Erreur: ${result.error}`}</div>
               </div>
               {result.success && (
-                <a 
-                  href={result.outputFile} 
+                <button 
                   className="btn"
-                  download
+                  onClick={() => handleDownload(result.outputFile)}
                 >
                   Télécharger
-                </a>
+                </button>
               )}
             </div>
           ))}
