@@ -294,4 +294,12 @@ router.post('/logout', authenticateToken, (req, res) => {
   });
 });
 
+// Route de statut (pour vérifier l'état d'authentification)
+router.get('/status', (req, res) => {
+  res.json({
+    authenticated: false,
+    message: 'Non authentifié'
+  });
+});
+
 module.exports = router; 
