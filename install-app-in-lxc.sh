@@ -145,11 +145,17 @@ module.exports = {
   },
 
   limits: {
-    maxFileSize: 100 * 1024 * 1024,
+    maxFileSize: 2 * 1024 * 1024 * 1024, // 2GB pour les gros fichiers audio
     maxFilesPerUser: 10,
-    maxProcessingTime: 30 * 60 * 1000,
+    maxProcessingTime: 120 * 60 * 1000, // 2 heures pour les gros fichiers
     rateLimitWindowMs: 15 * 60 * 1000,
-    rateLimitMaxRequests: 100
+    rateLimitMaxRequests: 100,
+    
+    // Nouveaux paramètres pour les gros fichiers
+    uploadTimeout: 30 * 60 * 1000, // 30 minutes pour l'upload
+    processingTimeout: 120 * 60 * 1000, // 2 heures pour le traitement
+    largeFileThreshold: 100 * 1024 * 1024, // 100MB = considéré comme gros fichier
+    maxConcurrentUploads: 3
   },
 
   paths: {
