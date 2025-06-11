@@ -1,15 +1,45 @@
 #!/bin/bash
 
 # Script pour mettre à jour la configuration dans le LXC existant
-# Usage: ./scripts/update-config-lxc.sh
+# Usage: ./scripts/update-config-lxc.sh [nom_ou_id_lxc]
+# Exemple: ./scripts/update-config-lxc.sh 101
+# Exemple: ./scripts/update-config-lxc.sh mon-lxc-stereo
 
 set -e
 
 # Variables
-LXC_NAME="stereo-tool-lxc"
+LXC_NAME="${1:-stereo-tool-lxc}"  # Utiliser le paramètre ou valeur par défaut
 APP_DIR="/opt/stereo-tool-processor"
 
 echo "🔧 Mise à jour de la configuration pour les gros fichiers..."
+echo "📋 Conteneur LXC: $LXC_NAME"
+
+# Auto-détection si aucun paramètre fourni
+if [ "$#" -eq 0 ]; then
+    echo "🔍 Aucun conteneur spécifié, recherche automatique..."
+    
+    # Chercher un conteneur qui contient "stereo" dans le nom ou qui a l'app
+    POSSIBLE_CONTAINERS=$(lxc list --format csv -c n,s | grep "RUNNING" | cut -d, -f1)
+    
+    for container in $POSSIBLE_CONTAINERS; do
+        if lxc exec "$container" -- bash -c "[ -d '$APP_DIR' ]" 2>/dev/null; then
+            LXC_NAME="$container"
+            echo "✅ Conteneur détecté automatiquement: $LXC_NAME"
+            break
+        fi
+    done
+    
+    if [ "$LXC_NAME" = "stereo-tool-lxc" ]; then
+        echo "❌ Aucun conteneur avec StereoTool trouvé automatiquement"
+        echo "💡 Spécifiez le nom ou ID de votre conteneur:"
+        echo "   Exemple: ./scripts/update-config-lxc.sh 101"
+        echo "   Exemple: ./scripts/update-config-lxc.sh mon-conteneur"
+        echo ""
+        echo "📋 Conteneurs disponibles:"
+        lxc list --format table -c n,s,4
+        exit 1
+    fi
+fi
 
 # Fonction pour exécuter des commandes dans le LXC
 lxc_exec() {
@@ -19,8 +49,20 @@ lxc_exec() {
 # Vérifier que le conteneur existe et fonctionne
 if ! lxc list | grep -q "$LXC_NAME.*RUNNING"; then
     echo "❌ Le conteneur $LXC_NAME n'est pas en cours d'exécution"
+    echo ""
+    echo "📋 Conteneurs disponibles:"
+    lxc list --format table -c n,s,4
     exit 1
 fi
+
+# Vérifier que l'application existe dans ce conteneur
+if ! lxc_exec "[ -d '$APP_DIR' ]" 2>/dev/null; then
+    echo "❌ L'application StereoTool n'est pas trouvée dans $LXC_NAME"
+    echo "   Chemin recherché: $APP_DIR"
+    exit 1
+fi
+
+echo "✅ Conteneur $LXC_NAME trouvé et application détectée"
 
 echo "📝 Génération de la nouvelle configuration..."
 
@@ -112,5 +154,12 @@ echo "   - Seuil gros fichier : 100MB"
 echo ""
 echo "🌐 Testez maintenant avec votre fichier de 1278MB !"
 echo ""
-echo "🔍 Pour vérifier les logs :"
-echo "   lxc exec $LXC_NAME -- sudo -u stereoapp pm2 logs stereo-tool-processor" 
+echo "🔍 Commandes utiles :"
+echo "   # Logs:"
+echo "   lxc exec $LXC_NAME -- sudo -u stereoapp pm2 logs stereo-tool-processor"
+echo ""
+echo "   # Status:"
+echo "   lxc exec $LXC_NAME -- sudo -u stereoapp pm2 status"
+echo ""
+echo "   # Redémarrer si besoin:"
+echo "   lxc exec $LXC_NAME -- sudo -u stereoapp pm2 restart stereo-tool-processor" 
