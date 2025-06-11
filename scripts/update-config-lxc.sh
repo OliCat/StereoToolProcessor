@@ -1,68 +1,69 @@
 #!/bin/bash
 
-# Script pour mettre à jour la configuration dans le LXC existant
-# Usage: ./scripts/update-config-lxc.sh [nom_ou_id_lxc]
+# Script pour mettre à jour la configuration dans le conteneur LXC Proxmox
+# Usage: ./scripts/update-config-lxc.sh [id_conteneur]
 # Exemple: ./scripts/update-config-lxc.sh 101
-# Exemple: ./scripts/update-config-lxc.sh mon-lxc-stereo
+# Compatible avec Proxmox (pct)
 
 set -e
 
 # Variables
-LXC_NAME="${1:-stereo-tool-lxc}"  # Utiliser le paramètre ou valeur par défaut
+CTID="${1:-}"  # ID du conteneur Proxmox
 APP_DIR="/opt/stereo-tool-processor"
 
 echo "🔧 Mise à jour de la configuration pour les gros fichiers..."
-echo "📋 Conteneur LXC: $LXC_NAME"
 
 # Auto-détection si aucun paramètre fourni
 if [ "$#" -eq 0 ]; then
     echo "🔍 Aucun conteneur spécifié, recherche automatique..."
     
-    # Chercher un conteneur qui contient "stereo" dans le nom ou qui a l'app
-    POSSIBLE_CONTAINERS=$(lxc list --format csv -c n,s | grep "RUNNING" | cut -d, -f1)
+    # Chercher un conteneur qui a l'application StereoTool
+    POSSIBLE_CONTAINERS=$(pct list | awk 'NR>1 && $2=="running" {print $1}')
     
     for container in $POSSIBLE_CONTAINERS; do
-        if lxc exec "$container" -- bash -c "[ -d '$APP_DIR' ]" 2>/dev/null; then
-            LXC_NAME="$container"
-            echo "✅ Conteneur détecté automatiquement: $LXC_NAME"
+        if pct exec "$container" -- bash -c "[ -d '$APP_DIR' ]" 2>/dev/null; then
+            CTID="$container"
+            echo "✅ Conteneur détecté automatiquement: $CTID"
             break
         fi
     done
     
-    if [ "$LXC_NAME" = "stereo-tool-lxc" ]; then
+    if [ -z "$CTID" ]; then
         echo "❌ Aucun conteneur avec StereoTool trouvé automatiquement"
-        echo "💡 Spécifiez le nom ou ID de votre conteneur:"
+        echo "💡 Spécifiez l'ID de votre conteneur:"
         echo "   Exemple: ./scripts/update-config-lxc.sh 101"
-        echo "   Exemple: ./scripts/update-config-lxc.sh mon-conteneur"
         echo ""
         echo "📋 Conteneurs disponibles:"
-        lxc list --format table -c n,s,4
+        pct list
         exit 1
     fi
+else
+    echo "📋 Conteneur LXC: $CTID"
 fi
 
-# Fonction pour exécuter des commandes dans le LXC
-lxc_exec() {
-    lxc exec "$LXC_NAME" -- bash -c "$1"
+# Fonction pour exécuter des commandes dans le conteneur
+pct_exec() {
+    pct exec "$CTID" -- bash -c "$1"
 }
 
 # Vérifier que le conteneur existe et fonctionne
-if ! lxc list | grep -q "$LXC_NAME.*RUNNING"; then
-    echo "❌ Le conteneur $LXC_NAME n'est pas en cours d'exécution"
+CT_STATUS=$(pct status "$CTID" 2>/dev/null | grep -o "running" || echo "stopped")
+if [ "$CT_STATUS" != "running" ]; then
+    echo "❌ Le conteneur $CTID n'est pas en cours d'exécution (statut: $CT_STATUS)"
     echo ""
     echo "📋 Conteneurs disponibles:"
-    lxc list --format table -c n,s,4
+    pct list
     exit 1
 fi
 
 # Vérifier que l'application existe dans ce conteneur
-if ! lxc_exec "[ -d '$APP_DIR' ]" 2>/dev/null; then
-    echo "❌ L'application StereoTool n'est pas trouvée dans $LXC_NAME"
+if ! pct_exec "[ -d '$APP_DIR' ]" 2>/dev/null; then
+    echo "❌ L'application StereoTool n'est pas trouvée dans le conteneur $CTID"
     echo "   Chemin recherché: $APP_DIR"
     exit 1
 fi
 
-echo "✅ Conteneur $LXC_NAME trouvé et application détectée"
+echo "✅ Conteneur $CTID trouvé et application détectée"
 
 echo "📝 Génération de la nouvelle configuration..."
 
@@ -125,23 +126,23 @@ module.exports = {
 EOF
 
 echo "🔄 Sauvegarde de la configuration actuelle..."
-lxc_exec "cp $APP_DIR/config.js $APP_DIR/config.js.backup-$(date +%Y%m%d-%H%M%S)"
+pct_exec "cp $APP_DIR/config.js $APP_DIR/config.js.backup-$(date +%Y%m%d-%H%M%S)"
 
 echo "📤 Upload de la nouvelle configuration..."
-pct push "$LXC_NAME" /tmp/config_updated.js "$APP_DIR/config.js"
+pct push "$CTID" /tmp/config_updated.js "$APP_DIR/config.js"
 rm /tmp/config_updated.js
 
 echo "🔧 Ajustement des permissions..."
-lxc_exec "chown stereoapp:stereoapp $APP_DIR/config.js"
+pct_exec "chown stereoapp:stereoapp $APP_DIR/config.js"
 
 echo "🔄 Redémarrage de l'application..."
-lxc_exec "sudo -u stereoapp pm2 restart stereo-tool-processor"
+pct_exec "sudo -u stereoapp pm2 restart stereo-tool-processor"
 
 echo "⏳ Attente du redémarrage..."
 sleep 5
 
 echo "📊 Vérification du statut..."
-lxc_exec "sudo -u stereoapp pm2 status"
+pct_exec "sudo -u stereoapp pm2 status"
 
 echo ""
 echo "✅ Configuration mise à jour avec succès !"
@@ -156,10 +157,10 @@ echo "🌐 Testez maintenant avec votre fichier de 1278MB !"
 echo ""
 echo "🔍 Commandes utiles :"
 echo "   # Logs:"
-echo "   lxc exec $LXC_NAME -- sudo -u stereoapp pm2 logs stereo-tool-processor"
+echo "   pct exec $CTID -- sudo -u stereoapp pm2 logs stereo-tool-processor"
 echo ""
 echo "   # Status:"
-echo "   lxc exec $LXC_NAME -- sudo -u stereoapp pm2 status"
+echo "   pct exec $CTID -- sudo -u stereoapp pm2 status"
 echo ""
 echo "   # Redémarrer si besoin:"
-echo "   lxc exec $LXC_NAME -- sudo -u stereoapp pm2 restart stereo-tool-processor" 
+echo "   pct exec $CTID -- sudo -u stereoapp pm2 restart stereo-tool-processor" 
