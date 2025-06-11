@@ -67,8 +67,18 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Configuration pour gros fichiers
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Augmenter les timeouts pour les gros fichiers
+app.use((req, res, next) => {
+  if (req.url.includes('/api/process-file') || req.url.includes('/api/upload') || req.url.includes('/api/batch-process')) {
+    req.setTimeout(config.limits.uploadTimeout);
+    res.setTimeout(config.limits.processingTimeout);
+  }
+  next();
+});
 
 // Configuration pour les reverse proxy
 app.set('trust proxy', 1);
@@ -230,9 +240,25 @@ app.post('/api/upload', authenticateToken, async (req, res) => {
     ])(req, res, async (err) => {
       if (err) {
         logger.error('Erreur upload:', err);
+        
+        let errorMessage = err.message;
+        let errorCode = 'UPLOAD_ERROR';
+        
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          errorMessage = `Fichier trop volumineux. Taille maximale autorisée: ${Math.round(config.limits.maxFileSize / (1024 * 1024 * 1024))}GB`;
+          errorCode = 'FILE_TOO_LARGE';
+        } else if (err.code === 'LIMIT_FILE_COUNT') {
+          errorMessage = 'Trop de fichiers sélectionnés';
+          errorCode = 'TOO_MANY_FILES';
+        } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+          errorMessage = 'Type de fichier non supporté';
+          errorCode = 'UNSUPPORTED_FILE_TYPE';
+        }
+        
         return res.status(400).json({
-          error: err.message,
-          code: 'UPLOAD_ERROR'
+          error: errorMessage,
+          code: errorCode,
+          details: err.message
         });
       }
 
@@ -412,6 +438,11 @@ app.post('/api/process-file', authenticateToken, singleFileUpload.fields([
     }
     
     const audioFile = req.files.audioFile[0];
+    
+    // Vérifier la taille du fichier et donner des informations à l'utilisateur
+    if (audioFile.size > config.limits.largeFileThreshold) {
+      logger.info(`Traitement d'un gros fichier: ${audioFile.originalname} (${Math.round(audioFile.size / (1024 * 1024))}MB)`);
+    }
     const preset = req.files.preset[0];
     const licenseKey = config.stereoTool.license; // Utiliser la licence du config
     

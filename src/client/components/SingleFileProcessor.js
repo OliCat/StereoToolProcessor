@@ -83,8 +83,18 @@ const SingleFileProcessor = () => {
       formData.append('preset', preset);
 
       // Vérification de la taille du fichier
-      if (audioFile.size > 1024 * 1024 * 50) { // si le fichier fait plus de 50 MB
-        setProcessing({ status: 'Le fichier est volumineux, traitement par segments en cours...', progress: 10 });
+      const fileSizeMB = Math.round(audioFile.size / (1024 * 1024));
+      
+      if (audioFile.size > 1024 * 1024 * 100) { // si le fichier fait plus de 100 MB
+        setProcessing({ 
+          status: `Fichier volumineux détecté (${fileSizeMB}MB). Le traitement peut prendre plusieurs minutes...`, 
+          progress: 10 
+        });
+      } else if (audioFile.size > 1024 * 1024 * 50) { // si le fichier fait plus de 50 MB
+        setProcessing({ 
+          status: `Traitement d'un fichier de ${fileSizeMB}MB en cours...`, 
+          progress: 10 
+        });
       }
 
       const token = localStorage.getItem('accessToken');
@@ -119,6 +129,7 @@ const SingleFileProcessor = () => {
 
   // Formats audio supportés
   const supportedFormats = ".wav, .mp3, .flac, .aiff, .ogg, .m4a";
+  const maxFileSizeGB = 2; // Correspond à la config 2GB
 
   return (
     <div>
@@ -161,6 +172,7 @@ const SingleFileProcessor = () => {
         </div>
 
         <div className="infobox">
+          <p><strong>Taille maximale :</strong> {maxFileSizeGB}GB par fichier</p>
           <p><strong>Note :</strong> Les fichiers de plus de 30 minutes seront automatiquement traités par segments.</p>
           <p><strong>Format de sortie :</strong> Tous les fichiers seront convertis au format WAV pour une meilleure compatibilité avec les applications audio.</p>
         </div>
