@@ -156,7 +156,7 @@ const processFileBySegments = async (inputPath, outputPath, presetPath, licenseK
       .sort();
     
     // Étape 3: Traiter chaque segment avec StereoTool
-    const stereoToolPath = './stereo_tool_mac';
+    const stereoToolPath = './stereo_tool_linux_x64'; // Chemin correct pour Linux
     for (const segment of segments) {
       const segmentPath = path.join(tempDir, segment);
       const outputSegmentPath = path.join(tempDir, `processed_${segment}`);
@@ -250,7 +250,7 @@ app.post('/api/process-file', upload.fields([
         });
         
         // Traiter avec StereoTool
-        const stereoToolPath = './stereo_tool_mac';
+        const stereoToolPath = './stereo_tool_linux_x64'; // Chemin correct pour Linux
         const command = `${stereoToolPath} "${tempWavPath}" "${outputPath}" -s "${preset.path}" -k "${licenseKey}"`;
         await processStereoTool(command);
         
@@ -258,7 +258,7 @@ app.post('/api/process-file', upload.fields([
         fs.unlinkSync(tempWavPath);
       } else {
         // Traiter directement avec StereoTool pour les fichiers WAV
-        const stereoToolPath = './stereo_tool_mac';
+        const stereoToolPath = './stereo_tool_linux_x64'; // Chemin correct pour Linux
         const command = `${stereoToolPath} "${audioFile.path}" "${outputPath}" -s "${preset.path}" -k "${licenseKey}"`;
         await processStereoTool(command);
       }
@@ -323,7 +323,7 @@ app.post('/api/batch-process', upload.fields([
             });
             
             // Traiter avec StereoTool
-            const stereoToolPath = './stereo_tool_mac';
+            const stereoToolPath = './stereo_tool_linux_x64'; // Chemin correct pour Linux
             const command = `${stereoToolPath} "${tempWavPath}" "${outputPath}" -s "${preset.path}" -k "${licenseKey}"`;
             await processStereoTool(command);
             
@@ -331,7 +331,7 @@ app.post('/api/batch-process', upload.fields([
             fs.unlinkSync(tempWavPath);
           } else {
             // Traiter directement avec StereoTool pour les fichiers WAV
-            const stereoToolPath = './stereo_tool_mac';
+            const stereoToolPath = './stereo_tool_linux_x64'; // Chemin correct pour Linux
             const command = `${stereoToolPath} "${audioFile.path}" "${outputPath}" -s "${preset.path}" -k "${licenseKey}"`;
             await processStereoTool(command);
           }

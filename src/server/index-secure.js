@@ -683,8 +683,111 @@ app.get('/api/download/:jobId', authenticateToken, async (req, res) => {
 
 // Fonction de traitement par segments (reprise de l'ancien serveur)
 const processFileBySegments = async (inputPath, outputPath, presetPath, licenseKey) => {
-  // [Même implémentation que dans l'ancien serveur]
-  // ... (code identique à celui de l'ancien serveur)
+  try {
+    const tempDir = path.join(__dirname, '../../temp');
+    const baseName = path.basename(inputPath, path.extname(inputPath));
+    const outputExt = path.extname(outputPath);
+    
+    // Étape 1: Diviser le fichier en segments de 10 minutes
+    const segmentDuration = 600; // 10 minutes en secondes
+    const tempExt = '.wav'; // Utiliser WAV pour le traitement intermédiaire
+    const segmentPattern = `${tempDir}/${baseName}_part_%03d${tempExt}`;
+    
+    logger.info(`Début du traitement par segments: ${path.basename(inputPath)}`);
+    
+    await new Promise((resolve, reject) => {
+      ffmpeg(inputPath)
+        .outputOptions([
+          `-f segment`,
+          `-segment_time ${segmentDuration}`,
+          `-c:a pcm_s16le` // Forcer le format PCM 16bit
+        ])
+        .output(segmentPattern)
+        .on('end', () => {
+          logger.info(`Segmentation terminée pour ${path.basename(inputPath)}`);
+          resolve();
+        })
+        .on('error', (err) => {
+          logger.error(`Erreur lors de la segmentation: ${err.message}`);
+          reject(err);
+        })
+        .run();
+    });
+    
+    // Étape 2: Récupérer la liste des segments
+    const segments = fs.readdirSync(tempDir)
+      .filter(file => file.startsWith(`${baseName}_part_`))
+      .sort();
+    
+    logger.info(`${segments.length} segments créés pour ${path.basename(inputPath)}`);
+    
+    // Étape 3: Traiter chaque segment avec StereoTool
+    const stereoToolPath = config.stereoTool.executablePath;
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i];
+      const segmentPath = path.join(tempDir, segment);
+      const outputSegmentPath = path.join(tempDir, `processed_${segment}`);
+      
+      logger.info(`Traitement du segment ${i + 1}/${segments.length}: ${segment}`);
+      
+      const command = `${stereoToolPath} "${segmentPath}" "${outputSegmentPath}" -s "${presetPath}" -k "${licenseKey}"`;
+      await processStereoTool(command);
+    }
+    
+    // Étape 4: Concaténer les segments traités
+    const processedSegments = fs.readdirSync(tempDir)
+      .filter(file => file.startsWith(`processed_${baseName}_part_`))
+      .sort();
+    
+    logger.info(`Concaténation de ${processedSegments.length} segments traités`);
+    
+    // Créer un fichier de liste pour ffmpeg
+    const listPath = path.join(tempDir, `${baseName}_list.txt`);
+    const fileList = processedSegments.map(file => `file '${path.join(tempDir, file)}'`).join('\n');
+    fs.writeFileSync(listPath, fileList);
+    
+    // Concaténer avec ffmpeg en utilisant des paramètres optimisés pour la compatibilité
+    await new Promise((resolve, reject) => {
+      let ffmpegCommand = ffmpeg();
+      
+      ffmpegCommand
+        .input(listPath)
+        .inputOptions(['-f concat', '-safe 0'])
+        .outputOptions([
+          '-c:a pcm_s16le', // Format PCM 16 bits, très compatible
+          '-ar 44100',      // Fréquence d'échantillonnage standard
+          '-map_metadata -1' // Supprimer toutes les métadonnées problématiques
+        ])
+        .output(outputPath)
+        .on('end', () => {
+          logger.info(`Concaténation terminée: ${path.basename(outputPath)}`);
+          resolve();
+        })
+        .on('error', (err) => {
+          logger.error(`Erreur lors de la concaténation: ${err.message}`);
+          reject(err);
+        })
+        .run();
+    });
+    
+    // Étape 5: Nettoyer les fichiers temporaires
+    for (const segment of [...segments, ...processedSegments]) {
+      const segmentPath = path.join(tempDir, segment);
+      if (fs.existsSync(segmentPath)) {
+        fs.unlinkSync(segmentPath);
+      }
+    }
+    if (fs.existsSync(listPath)) {
+      fs.unlinkSync(listPath);
+    }
+    
+    logger.info(`Traitement par segments terminé avec succès: ${path.basename(outputPath)}`);
+    return true;
+    
+  } catch (error) {
+    logger.error('Erreur lors du traitement par segments:', error);
+    throw error;
+  }
 };
 
 // Route d'administration
