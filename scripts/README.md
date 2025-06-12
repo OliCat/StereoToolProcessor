@@ -4,7 +4,69 @@ Ce dossier contient des scripts en ligne de commande pour administrer l'applicat
 
 ## Scripts disponibles
 
-### 1. Création d'utilisateur (`create-user.js`)
+### 1. Gestionnaire d'utilisateurs (`manage-user.js`) ⭐ NOUVEAU ⭐
+
+Script polyvalent pour gérer les utilisateurs : création, modification de mot de passe, mise à jour des informations, activation/désactivation.
+
+#### Utilisation
+
+```bash
+node scripts/manage-user.js <action> [options]
+```
+
+#### Actions disponibles
+
+- `create` : Créer un nouvel utilisateur
+- `change-password` : Changer le mot de passe d'un utilisateur existant
+- `update-info` : Mettre à jour les informations d'un utilisateur
+- `activate` : Activer un utilisateur
+- `deactivate` : Désactiver un utilisateur
+
+#### Options
+
+**Options communes :**
+- `--email <email>` : Email de l'utilisateur (requis)
+- `--help` : Afficher l'aide
+
+**Options pour `create` :**
+- `--password <password>` : Mot de passe (requis, min. 8 caractères)
+- `--firstName <prénom>` : Prénom de l'utilisateur (requis)
+- `--lastName <nom>` : Nom de famille de l'utilisateur (requis)
+- `--role <rôle>` : Rôle de l'utilisateur (`admin`, `user`, `guest`, défaut: `user`)
+
+**Options pour `change-password` :**
+- `--new-password <password>` : Nouveau mot de passe (requis, min. 8 caractères)
+
+**Options pour `update-info` :**
+- `--firstName <prénom>` : Nouveau prénom (optionnel)
+- `--lastName <nom>` : Nouveau nom (optionnel)
+- `--role <rôle>` : Nouveau rôle (optionnel)
+
+#### Exemples
+
+```bash
+# Créer un administrateur
+node scripts/manage-user.js create --email admin@radiocausecommune.fr --password MotDePasse123! --firstName Admin --lastName System --role admin
+
+# Changer un mot de passe
+node scripts/manage-user.js change-password --email utilisateur@radiocausecommune.fr --new-password NouveauMotDePasse123!
+
+# Mettre à jour les informations d'un utilisateur
+node scripts/manage-user.js update-info --email utilisateur@radiocausecommune.fr --firstName Jean --lastName Martin --role admin
+
+# Activer un utilisateur
+node scripts/manage-user.js activate --email utilisateur@radiocausecommune.fr
+
+# Désactiver un utilisateur
+node scripts/manage-user.js deactivate --email utilisateur@radiocausecommune.fr
+
+# Afficher l'aide
+node scripts/manage-user.js --help
+```
+
+### 2. Création d'utilisateur (`create-user.js`) 
+
+⚠️ **DÉPRÉCIÉ** - Utilisez `manage-user.js create` à la place
 
 Permet de créer de nouveaux utilisateurs directement en ligne de commande.
 
@@ -45,7 +107,7 @@ Le script valide automatiquement :
 - Unicité de l'email
 - Validité du rôle
 
-### 2. Liste des utilisateurs (`list-users.js`)
+### 3. Liste des utilisateurs (`list-users.js`)
 
 Permet d'afficher la liste des utilisateurs avec leurs informations.
 
